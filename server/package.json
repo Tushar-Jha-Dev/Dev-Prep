@@ -1,0 +1,51 @@
+{
+  "name": "devprep-server",
+  "version": "1.0.0",
+  "description": "Backend API for DevPrep developer preparation platform",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "seed": "node scripts/seed.js",
+    "test:db": "node scripts/test-fileDb.js",
+    "test:auth": "node scripts/test-auth.js",
+    "test:phase5": "node scripts/test-phase5.js",
+    "test:phase5b": "node scripts/test-phase5b.js",
+    "test:phase6": "node scripts/test-phase6.js",
+    "test:phase7": "node scripts/test-phase7.js",
+    "test:phase8": "node scripts/test-phase8.js",
+    "test:phase8b": "node scripts/test-phase8b.js",
+    "test:phase9": "node scripts/test-phase9.js",
+    "test:percentage": "node scripts/test-percentage.js",
+    "test:phase10": "node scripts/test-phase10.js",
+    "test:phase10b": "node scripts/test-phase10b.js",
+    "test:editor": "node scripts/test-editor-features.js",
+    "test:contrast": "node scripts/test-contrast.js",
+    "test:mock-tests": "node scripts/verify-flow-and-sweep.js",
+    "test:avatar": "node scripts/test-avatar.js",
+    "test:qa:auth": "node scripts/qa-auth-security.js",
+    "test:qa:data": "node scripts/qa-data-concurrency.js",
+    "test:qa:browser": "node scripts/qa-browser-responsive-a11y.js",
+    "test:qa:fresh": "node scripts/test-fresh-setup.js",
+    "test:mock-polish": "node scripts/test-mock-polish.js",
+    "test:qa:mock-polish": "node scripts/qa-browser-mock-polish.js",
+    "test:qa:all": "node scripts/qa-auth-security.js && node scripts/qa-data-concurrency.js && node scripts/test-fresh-setup.js"
+  },
+  "keywords": [
+    "devprep",
+    "express",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

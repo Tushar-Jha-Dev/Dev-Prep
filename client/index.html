@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevPrep – Developer Preparation Platform</title>
+    <meta
+      name="description"
+      content="A focused, full-stack developer preparation platform for technical coding interview practice, timed mock assessments, code notes, and internship tracking."
+    />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4EFE6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#151310" />
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Google Fonts:
+         Paper Skin: Young Serif (Headings), Hanken Grotesk (Body & UI), IBM Plex Mono (Code & Timer)
+         Studio Skin: Bricolage Grotesque (Headings), Plus Jakarta Sans (Body & UI), JetBrains Mono (Code & Timer) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&family=Young+Serif&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Anti-Flash of Incorrect Skin & Theme (FOIT) Script:
+         Executes synchronously before React loads to apply data-skin and data-theme immediately -->
+    <script>
+      (function() {
+        try {
+          // 1. Resolve and set visual skin (default: paper)
+          var savedSkin = localStorage.getItem('devprep-skin');
+          var activeSkin = (savedSkin === 'studio' || savedSkin === 'paper') ? savedSkin : 'paper';
+          document.documentElement.setAttribute('data-skin', activeSkin);
+
+          // 2. Resolve and set light/dark theme mode
+          var savedTheme = localStorage.getItem('devprep-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.removeAttribute('data-theme');
+          }
+        } catch (e) {
+          // Fallback safely if storage is restricted
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

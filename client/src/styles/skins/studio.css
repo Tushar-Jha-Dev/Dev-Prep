@@ -1,0 +1,133 @@
+/**
+ * DevPrep - "Studio" Visual Theme Skin (`studio.css`)
+ * Aesthetic: Modern precision engineering workbench
+ * Strict rule: Never use pure #000 or #FFF anywhere in Studio.
+ */
+
+:root[data-skin="studio"],
+[data-skin="studio"] {
+  /* Surface & Background */
+  --bg: #F8F7F4;
+  --surface: #FDFDFB;
+  --surface-2: #EFEEE9;
+  --surface-3: #E7E6E0;
+  --border: #E3E1DA;
+  --border-strong: #CFCDC4;
+  --text: #18181B;
+  --text-muted: #5C5E66;
+
+  /* Accent (Cobalt Blue) */
+  --accent: #2B44B8;
+  --accent-hover: #22379A;
+  --accent-soft: #E4E8F8;
+  --accent-contrast: #F8F7F4;
+
+  /* Semantic Status Colors */
+  --success: #27703F;
+  --success-soft: #E1F0E6;
+  --warning: #8A5A00;
+  --warning-soft: #F6EBCF;
+  --danger: #B42318;
+  --danger-soft: #F8DEDA;
+  --info: #475569;
+  --info-soft: #E3E8EF;
+
+  /* Navigation Sidebar */
+  --sidebar-bg: #F1F0EB;
+  --sidebar-text: #5C5E66;
+  --sidebar-active-bg: #E4E8F8;
+  --sidebar-active-text: #2B44B8;
+
+  /* Elevation & Shape */
+  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+
+  /* Focus, Selection & Backdrop */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --selection: rgba(43, 68, 184, 0.18);
+  --modal-backdrop: rgba(18, 19, 22, 0.50);
+
+  /* Charts */
+  --chart-1: #2B44B8;
+  --chart-2: #475569;
+  --chart-3: #27703F;
+  --chart-4: #8A5A00;
+  --chart-5: #B42318;
+
+  /* Logo Tile */
+  --logo-tile: transparent;
+
+  /* Typography Stack */
+  --font-heading: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --heading-weight: 600;
+  --heading-line-height: 1.20;
+  --tracking-heading: -0.02em;
+  --tracking-heading-sm: -0.01em;
+}
+
+:root[data-skin="studio"][data-theme="dark"],
+[data-skin="studio"][data-theme="dark"] {
+  /* Surface & Background */
+  --bg: #121316;
+  --surface: #181B20;
+  --surface-2: #22262E;
+  --surface-3: #2A2F38;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #EDEDEF;
+  --text-muted: #9A9CA6;
+
+  /* Accent (Electric Periwinkle / Soft Cobalt) */
+  --accent: #8FA6FF;
+  --accent-hover: #A7B8FF;
+  --accent-soft: #1D2548;
+  --accent-contrast: #0B1030;
+
+  /* Semantic Status Colors */
+  --success: #66C28A;
+  --success-soft: #16281F;
+  --warning: #E0B04F;
+  --warning-soft: #2B2414;
+  --danger: #F2867E;
+  --danger-soft: #2E1A19;
+  --info: #9AA7BD;
+  --info-soft: #1E242E;
+
+  /* Navigation Sidebar */
+  --sidebar-bg: #0E0F12;
+  --sidebar-text: #9A9CA6;
+  --sidebar-active-bg: #1D2548;
+  --sidebar-active-text: #8FA6FF;
+
+  /* Elevation & Shape */
+  --shadow-sm: none;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+
+  /* Focus, Selection & Backdrop */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --selection: rgba(143, 166, 255, 0.28);
+  --modal-backdrop: rgba(18, 19, 22, 0.65);
+
+  /* Charts */
+  --chart-1: #8FA6FF;
+  --chart-2: #9AA7BD;
+  --chart-3: #66C28A;
+  --chart-4: #E0B04F;
+  --chart-5: #F2867E;
+
+  /* Logo Tile: Cream tile on dark background so dark-brown logo parts remain distinct */
+  --logo-tile: #F2F0EA;
+
+  /* Typography Stack */
+  --font-heading: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --heading-weight: 600;
+  --heading-line-height: 1.20;
+  --tracking-heading: -0.02em;
+  --tracking-heading-sm: -0.01em;
+}

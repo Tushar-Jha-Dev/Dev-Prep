@@ -1,0 +1,587 @@
+[
+  {
+    "id": "mcq-arr-1",
+    "topic": "Arrays",
+    "question": "What is the worst-case time complexity of inserting an element at the beginning of an array of size n?",
+    "options": [
+      "O(1)",
+      "O(log n)",
+      "O(n)",
+      "O(n log n)"
+    ],
+    "correctIndex": 2,
+    "explanation": "Inserting at the beginning requires shifting all n existing elements right by one position, taking O(n) time."
+  },
+  {
+    "id": "mcq-arr-2",
+    "topic": "Arrays",
+    "question": "In Kadane's algorithm for Maximum Subarray, what is the runtime complexity achieved?",
+    "options": [
+      "O(n^2)",
+      "O(n)",
+      "O(log n)",
+      "O(1)"
+    ],
+    "correctIndex": 1,
+    "explanation": "Kadane's algorithm scans the array in a single pass maintaining current and maximum sums in O(n) time."
+  },
+  {
+    "id": "mcq-arr-3",
+    "topic": "Arrays",
+    "question": "Given an array nums of n elements, what is the space complexity of finding duplicates using a Hash Set?",
+    "options": [
+      "O(1)",
+      "O(n)",
+      "O(log n)",
+      "O(n^2)"
+    ],
+    "correctIndex": 1,
+    "explanation": "In the worst case where all elements are unique, the hash set stores all n elements, consuming O(n) auxiliary space."
+  },
+  {
+    "id": "mcq-arr-4",
+    "topic": "Arrays",
+    "question": "Which of the following operations takes O(1) time in a static array?",
+    "options": [
+      "Random access by index",
+      "Searching an unsorted array",
+      "Deleting the first element",
+      "Inserting into the middle"
+    ],
+    "correctIndex": 0,
+    "explanation": "Direct memory calculation base_address + index * element_size allows O(1) random access by index."
+  },
+  {
+    "id": "mcq-arr-5",
+    "topic": "Arrays",
+    "question": "The Dutch National Flag problem (sort 0s, 1s, and 2s) can be solved in a single pass with what complexity?",
+    "options": [
+      "O(n) time, O(1) space",
+      "O(n log n) time, O(n) space",
+      "O(n^2) time, O(1) space",
+      "O(log n) time, O(1) space"
+    ],
+    "correctIndex": 0,
+    "explanation": "Using three pointers (low, mid, high), the Dutch National Flag algorithm partitions in O(n) time and O(1) extra space."
+  },
+  {
+    "id": "mcq-str-1",
+    "topic": "Strings",
+    "question": "What is the time complexity of checking if two strings of length n are anagrams using character frequency counting?",
+    "options": [
+      "O(n^2)",
+      "O(n)",
+      "O(n log n)",
+      "O(1)"
+    ],
+    "correctIndex": 1,
+    "explanation": "Counting frequencies takes O(n) time to scan both strings and O(26) = O(1) auxiliary space."
+  },
+  {
+    "id": "mcq-str-2",
+    "topic": "Strings",
+    "question": "In the KMP pattern searching algorithm, what is the worst-case time complexity to search a pattern of length m in text of length n?",
+    "options": [
+      "O(n * m)",
+      "O(n + m)",
+      "O(n log m)",
+      "O(m log n)"
+    ],
+    "correctIndex": 1,
+    "explanation": "KMP builds the prefix table (LPS) in O(m) and matches against the text in O(n), yielding total O(n + m) time."
+  },
+  {
+    "id": "mcq-str-3",
+    "topic": "Strings",
+    "question": "Which algorithmic technique allows finding the longest substring without repeating characters in O(n) time?",
+    "options": [
+      "Dynamic programming with memoization",
+      "Two-pointer sliding window with hash set",
+      "Divide and conquer",
+      "Breadth-first search"
+    ],
+    "correctIndex": 1,
+    "explanation": "A sliding window expands the right pointer and contracts the left pointer whenever duplicate characters are encountered."
+  },
+  {
+    "id": "mcq-str-4",
+    "topic": "Strings",
+    "question": "What is the space complexity of storing the longest palindromic substring in a string of length n?",
+    "options": [
+      "O(1)",
+      "O(n)",
+      "O(n^2)",
+      "O(log n)"
+    ],
+    "correctIndex": 1,
+    "explanation": "The resulting substring itself can be up to length n, requiring O(n) storage."
+  },
+  {
+    "id": "mcq-str-5",
+    "topic": "Strings",
+    "question": "Which string matching algorithm uses rolling hashes to search for a pattern in text?",
+    "options": [
+      "Boyer-Moore",
+      "Rabin-Karp",
+      "Aho-Corasick",
+      "Manacher's Algorithm"
+    ],
+    "correctIndex": 1,
+    "explanation": "Rabin-Karp computes rolling hash values of substrings to find potential pattern matches in O(n + m) average time."
+  },
+  {
+    "id": "mcq-ll-1",
+    "topic": "Linked Lists",
+    "question": "How can you detect a cycle in a singly linked list in O(n) time and O(1) auxiliary space?",
+    "options": [
+      "Floyd's Tortoise and Hare algorithm",
+      "Hash table storing visited pointers",
+      "Recursion stack",
+      "Sorting node memory addresses"
+    ],
+    "correctIndex": 0,
+    "explanation": "Floyd's algorithm moves slow by 1 step and fast by 2 steps; if a cycle exists, they must meet within the loop."
+  },
+  {
+    "id": "mcq-ll-2",
+    "topic": "Linked Lists",
+    "question": "What is the time complexity to find the middle node of a linked list using slow and fast pointers?",
+    "options": [
+      "O(n^2)",
+      "O(n)",
+      "O(log n)",
+      "O(1)"
+    ],
+    "correctIndex": 1,
+    "explanation": "With slow advancing 1 step and fast advancing 2 steps, the middle node is found in a single pass of O(n) steps."
+  },
+  {
+    "id": "mcq-ll-3",
+    "topic": "Linked Lists",
+    "question": "In a doubly linked list with head and tail pointers, what is the time complexity to delete the last node?",
+    "options": [
+      "O(n)",
+      "O(1)",
+      "O(log n)",
+      "O(n^2)"
+    ],
+    "correctIndex": 1,
+    "explanation": "Since the tail has a direct backward pointer (tail.prev), unlinking the last node takes O(1) time."
+  },
+  {
+    "id": "mcq-ll-4",
+    "topic": "Linked Lists",
+    "question": "What is the time complexity to reverse a singly linked list iteratively?",
+    "options": [
+      "O(1)",
+      "O(log n)",
+      "O(n)",
+      "O(n^2)"
+    ],
+    "correctIndex": 2,
+    "explanation": "Iterating through the list once and reversing each next pointer takes O(n) time and O(1) space."
+  },
+  {
+    "id": "mcq-ll-5",
+    "topic": "Linked Lists",
+    "question": "What is a primary advantage of a linked list over a dynamic array?",
+    "options": [
+      "Constant-time random access",
+      "Dynamic sizing and O(1) insertion/deletion at known nodes without shifting",
+      "Better cache locality",
+      "Lower memory overhead per element"
+    ],
+    "correctIndex": 1,
+    "explanation": "Linked lists allocate nodes dynamically without needing pre-allocated memory or shifting elements during insertions."
+  },
+  {
+    "id": "mcq-stk-1",
+    "topic": "Stack",
+    "question": "Which data structure principle does a Stack follow?",
+    "options": [
+      "FIFO (First In First Out)",
+      "LIFO (Last In First Out)",
+      "Priority Based",
+      "Random Access"
+    ],
+    "correctIndex": 1,
+    "explanation": "Stacks follow Last-In, First-Out (LIFO), where the most recently pushed element is the first to be popped."
+  },
+  {
+    "id": "mcq-stk-2",
+    "topic": "Stack",
+    "question": "What data structure is most suitable for evaluating postfix expressions and matching parentheses?",
+    "options": [
+      "Queue",
+      "Stack",
+      "Binary Tree",
+      "Disjoint Set"
+    ],
+    "correctIndex": 1,
+    "explanation": "A stack cleanly tracks opening brackets and operands, matching them with incoming closing brackets and operators."
+  },
+  {
+    "id": "mcq-stk-3",
+    "topic": "Stack",
+    "question": "What is the time complexity to find the Next Greater Element for all elements in an array using a Monotonic Stack?",
+    "options": [
+      "O(n^2)",
+      "O(n log n)",
+      "O(n)",
+      "O(2^n)"
+    ],
+    "correctIndex": 2,
+    "explanation": "Every element is pushed onto and popped from the monotonic stack at most once, resulting in linear O(n) time."
+  },
+  {
+    "id": "mcq-stk-4",
+    "topic": "Stack",
+    "question": "Can a queue be implemented using two stacks? If so, what is the amortized cost per dequeue operation?",
+    "options": [
+      "No, impossible",
+      "Yes, O(1) amortized",
+      "Yes, O(n^2) amortized",
+      "Yes, O(log n) amortized"
+    ],
+    "correctIndex": 1,
+    "explanation": "Using an inbox stack for enqueue and an outbox stack for dequeue gives amortized O(1) cost per dequeue."
+  },
+  {
+    "id": "mcq-stk-5",
+    "topic": "Stack",
+    "question": "In recursive function execution, what happens when recursion depth exceeds system capacity without hitting a base case?",
+    "options": [
+      "Stack Overflow error",
+      "Garbage collection trigger",
+      "Automatic heap conversion",
+      "Buffer underrun"
+    ],
+    "correctIndex": 0,
+    "explanation": "Each recursive call allocates a stack frame; infinite recursion exhausts call stack memory, triggering a Stack Overflow."
+  },
+  {
+    "id": "mcq-que-1",
+    "topic": "Queue",
+    "question": "Which principle defines the ordering in a standard Queue?",
+    "options": [
+      "LIFO",
+      "FIFO (First In First Out)",
+      "FILO",
+      "Random"
+    ],
+    "correctIndex": 1,
+    "explanation": "A queue operates under First-In, First-Out (FIFO): elements are enqueued at the rear and dequeued from the front."
+  },
+  {
+    "id": "mcq-que-2",
+    "topic": "Queue",
+    "question": "What issue in a linear array queue implementation does a Circular Queue resolve?",
+    "options": [
+      "Stack overflow",
+      "False overflow when front elements are dequeued",
+      "Hash collisions",
+      "Loss of LIFO order"
+    ],
+    "correctIndex": 1,
+    "explanation": "In a plain array queue, dequeuing leaves unused space at the front; a circular queue wraps around using modulo arithmetic."
+  },
+  {
+    "id": "mcq-que-3",
+    "topic": "Queue",
+    "question": "In Breadth-First Search (BFS) graph traversal, which data structure is used to maintain the exploration frontier?",
+    "options": [
+      "Stack",
+      "Queue",
+      "Max Heap",
+      "Binary Search Tree"
+    ],
+    "correctIndex": 1,
+    "explanation": "BFS explores vertices level by level using a FIFO queue to guarantee shortest path traversal in unweighted graphs."
+  },
+  {
+    "id": "mcq-que-4",
+    "topic": "Queue",
+    "question": "What is a Deque (Double-Ended Queue)?",
+    "options": [
+      "A queue that supports insertion and deletion at both ends",
+      "A queue with priority",
+      "A queue that only accepts duplicates",
+      "A queue implemented on disk"
+    ],
+    "correctIndex": 0,
+    "explanation": "A deque supports constant-time push and pop operations at both the front and the back."
+  },
+  {
+    "id": "mcq-que-5",
+    "topic": "Queue",
+    "question": "What is the time complexity of inserting an element into a Priority Queue implemented with a binary min-heap?",
+    "options": [
+      "O(1)",
+      "O(log n)",
+      "O(n)",
+      "O(n log n)"
+    ],
+    "correctIndex": 1,
+    "explanation": "Inserting at the end and bubbling up (heapify-up) along the tree height of log2(n) takes O(log n) time."
+  },
+  {
+    "id": "mcq-tre-1",
+    "topic": "Trees",
+    "question": "In an unbalanced Binary Search Tree (BST) of n nodes, what is the worst-case time complexity of search?",
+    "options": [
+      "O(1)",
+      "O(log n)",
+      "O(n)",
+      "O(n log n)"
+    ],
+    "correctIndex": 2,
+    "explanation": "If a BST becomes skewed (like a linked list), searching requires inspecting every node, taking O(n) time."
+  },
+  {
+    "id": "mcq-tre-2",
+    "topic": "Trees",
+    "question": "Which tree traversal produces elements of a Binary Search Tree in sorted ascending order?",
+    "options": [
+      "Pre-order",
+      "In-order",
+      "Post-order",
+      "Level-order"
+    ],
+    "correctIndex": 1,
+    "explanation": "In-order traversal visits left subtree, root, then right subtree, naturally outputting keys in ascending order."
+  },
+  {
+    "id": "mcq-tre-3",
+    "topic": "Trees",
+    "question": "What is the maximum number of nodes at level L in a binary tree (assuming the root is at level 0)?",
+    "options": [
+      "2^L",
+      "2^(L+1) - 1",
+      "L^2",
+      "2L"
+    ],
+    "correctIndex": 0,
+    "explanation": "Level 0 has 2^0 = 1 node, level 1 has 2^1 = 2 nodes; in general, level L can hold at most 2^L nodes."
+  },
+  {
+    "id": "mcq-tre-4",
+    "topic": "Trees",
+    "question": "What self-balancing binary search tree ensures the height difference between left and right subtrees is at most 1?",
+    "options": [
+      "Red-Black Tree",
+      "AVL Tree",
+      "B-Tree",
+      "Trie"
+    ],
+    "correctIndex": 1,
+    "explanation": "An AVL tree maintains strict balance by enforcing a balance factor of -1, 0, or 1 at every node."
+  },
+  {
+    "id": "mcq-tre-5",
+    "topic": "Trees",
+    "question": "What is the lowest common ancestor (LCA) of nodes 2 and 8 in a BST with root 6?",
+    "options": [
+      "6",
+      "2",
+      "8",
+      "4"
+    ],
+    "correctIndex": 0,
+    "explanation": "Since 2 is in the left subtree (2 < 6) and 8 is in the right subtree (8 > 6), the paths diverge at root 6, making 6 the LCA."
+  },
+  {
+    "id": "mcq-grp-1",
+    "topic": "Graphs",
+    "question": "What is the time complexity of Depth-First Search (DFS) on a graph represented as an adjacency list with V vertices and E edges?",
+    "options": [
+      "O(V^2)",
+      "O(V + E)",
+      "O(V * E)",
+      "O(E log V)"
+    ],
+    "correctIndex": 1,
+    "explanation": "DFS visits every vertex once and explores every edge in the adjacency list, yielding O(V + E) time."
+  },
+  {
+    "id": "mcq-grp-2",
+    "topic": "Graphs",
+    "question": "Which algorithm finds single-source shortest paths in a weighted graph with non-negative edge weights?",
+    "options": [
+      "Bellman-Ford",
+      "Dijkstra's Algorithm",
+      "Floyd-Warshall",
+      "Kruskal's Algorithm"
+    ],
+    "correctIndex": 1,
+    "explanation": "Dijkstra's algorithm greedily extracts the minimum tentative distance using a priority queue in O((V + E) log V) time."
+  },
+  {
+    "id": "mcq-grp-3",
+    "topic": "Graphs",
+    "question": "How can you find a topological ordering in a Directed Acyclic Graph (DAG)?",
+    "options": [
+      "Kahn's Algorithm (in-degree queue) or DFS with stack",
+      "Dijkstra's Algorithm",
+      "Prim's Algorithm",
+      "Binary Search"
+    ],
+    "correctIndex": 0,
+    "explanation": "Topological ordering can be constructed using Kahn's algorithm (in-degree 0 queue) or post-order DFS."
+  },
+  {
+    "id": "mcq-grp-4",
+    "topic": "Graphs",
+    "question": "What is a Minimum Spanning Tree (MST) of a connected, undirected, weighted graph with V vertices?",
+    "options": [
+      "A cycle containing all vertices",
+      "A tree connecting all V vertices with V - 1 edges having minimal total weight",
+      "The shortest path between source and target",
+      "A graph with maximum flow"
+    ],
+    "correctIndex": 1,
+    "explanation": "An MST connects all V vertices without cycles using exactly V - 1 edges that minimize the sum of edge weights."
+  },
+  {
+    "id": "mcq-grp-5",
+    "topic": "Graphs",
+    "question": "What is the space complexity of an adjacency matrix representation for a graph with V vertices?",
+    "options": [
+      "O(V)",
+      "O(V + E)",
+      "O(V^2)",
+      "O(E)"
+    ],
+    "correctIndex": 2,
+    "explanation": "An adjacency matrix allocates a 2D array of size V x V, taking O(V^2) memory regardless of the number of edges."
+  },
+  {
+    "id": "mcq-dp-1",
+    "topic": "Dynamic Programming",
+    "question": "What are the two essential characteristics of a problem solvable by Dynamic Programming?",
+    "options": [
+      "Greedy choice and divide and conquer",
+      "Overlapping subproblems and optimal substructure",
+      "Sorting and binary search",
+      "Adjacency matrix and visited array"
+    ],
+    "correctIndex": 1,
+    "explanation": "DP applies when smaller instances of the problem overlap and the overall optimal solution can be built from optimal sub-solutions."
+  },
+  {
+    "id": "mcq-dp-2",
+    "topic": "Dynamic Programming",
+    "question": "What is the distinction between Memoization (Top-Down) and Tabulation (Bottom-Up)?",
+    "options": [
+      "Memoization is iterative; Tabulation is recursive",
+      "Memoization is recursive with caching; Tabulation is iterative table filling",
+      "They solve completely different problem classes",
+      "Tabulation requires exponential space"
+    ],
+    "correctIndex": 1,
+    "explanation": "Memoization caches results of recursive calls from top to base, while tabulation iteratively fills a table from base cases up."
+  },
+  {
+    "id": "mcq-dp-3",
+    "topic": "Dynamic Programming",
+    "question": "What is the time complexity to solve the 0/1 Knapsack problem with n items and capacity W using Dynamic Programming?",
+    "options": [
+      "O(2^n)",
+      "O(n * W)",
+      "O(n + W)",
+      "O(n log W)"
+    ],
+    "correctIndex": 1,
+    "explanation": "The DP table has dimensions (n + 1) x (W + 1), and each cell takes O(1) to evaluate, giving O(n * W) pseudo-polynomial time."
+  },
+  {
+    "id": "mcq-dp-4",
+    "topic": "Dynamic Programming",
+    "question": "In the Longest Common Subsequence (LCS) problem, what is the DP state transition when s1[i-1] == s2[j-1]?",
+    "options": [
+      "dp[i][j] = dp[i-1][j-1] + 1",
+      "dp[i][j] = max(dp[i-1][j], dp[i][j-1])",
+      "dp[i][j] = dp[i-1][j] + dp[i][j-1]",
+      "dp[i][j] = 0"
+    ],
+    "correctIndex": 0,
+    "explanation": "When characters match, 1 is added to the LCS length of the smaller prefixes: dp[i-1][j-1] + 1."
+  },
+  {
+    "id": "mcq-dp-5",
+    "topic": "Dynamic Programming",
+    "question": "In calculating the nth Fibonacci number, how does Dynamic Programming improve upon naive recursion?",
+    "options": [
+      "Reduces time complexity from O(2^n) to O(n)",
+      "Increases floating point precision",
+      "Eliminates variables",
+      "Transforms the answer into floats"
+    ],
+    "correctIndex": 0,
+    "explanation": "Naive recursion recomputes overlapping subproblems in O(2^n) time; DP stores results to evaluate each subproblem once in O(n) time."
+  },
+  {
+    "id": "mcq-bs-1",
+    "topic": "Binary Search",
+    "question": "What precondition MUST be met before applying standard Binary Search on an array?",
+    "options": [
+      "Array elements must be all positive",
+      "Array must be sorted",
+      "Array size must be a power of 2",
+      "Array must have no duplicates"
+    ],
+    "correctIndex": 1,
+    "explanation": "Binary Search halves the search space by comparing with the midpoint, which requires elements to be in sorted order."
+  },
+  {
+    "id": "mcq-bs-2",
+    "topic": "Binary Search",
+    "question": "What is the maximum number of comparisons Binary Search makes on a sorted array of 1,000,000 items in the worst case?",
+    "options": [
+      "~20 comparisons",
+      "~100 comparisons",
+      "~1000 comparisons",
+      "~500,000 comparisons"
+    ],
+    "correctIndex": 0,
+    "explanation": "log2(1,000,000) is approximately 19.93, meaning at most 20 comparisons are required to locate or rule out any key."
+  },
+  {
+    "id": "mcq-bs-3",
+    "topic": "Binary Search",
+    "question": "To avoid 32-bit integer overflow when calculating midpoint (low + high) / 2, which formula is recommended?",
+    "options": [
+      "low + (high - low) / 2",
+      "(high - low) / 2",
+      "low * 2",
+      "high - low"
+    ],
+    "correctIndex": 0,
+    "explanation": "If low + high exceeds 2^31 - 1, it overflows; low + (high - low) / 2 prevents overflow while computing the exact midpoint."
+  },
+  {
+    "id": "mcq-bs-4",
+    "topic": "Binary Search",
+    "question": "Can Binary Search be used to find the minimum element in a rotated sorted array in O(log n) time?",
+    "options": [
+      "Yes, by comparing nums[mid] with nums[right]",
+      "No, it always requires linear scan O(n)",
+      "Only if rotated an even number of times",
+      "Only if array contains negative numbers"
+    ],
+    "correctIndex": 0,
+    "explanation": "Comparing nums[mid] with nums[right] determines whether the pivot lies in the left or right partition in O(log n) time."
+  },
+  {
+    "id": "mcq-bs-5",
+    "topic": "Binary Search",
+    "question": "What is 'Binary Search on Answer'?",
+    "options": [
+      "Searching a sorted array for an index",
+      "Searching monotonic solution spaces using a feasibility check function",
+      "Searching binary trees",
+      "Searching using 0s and 1s only"
+    ],
+    "correctIndex": 1,
+    "explanation": "When a feasibility check is monotonic (true for all values >= target), binary search can find the optimal threshold in O(log(range) * check_cost)."
+  }
+]
