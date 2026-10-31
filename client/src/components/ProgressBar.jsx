@@ -23,6 +23,8 @@ export default function ProgressBar({
   total,
   label,
   value,
+  ariaLabel,
+  'aria-label': propAriaLabel,
   className = ''
 }) {
   // Determine standard integer percentage (0 to 100)
@@ -49,6 +51,8 @@ export default function ProgressBar({
     }
   }
 
+  const effectiveAriaLabel = label || ariaLabel || propAriaLabel || 'Progress';
+
   return (
     <div className={`progress-bar-wrapper ${className}`}>
       {(label || displayValue) && (
@@ -70,7 +74,7 @@ export default function ProgressBar({
           aria-valuenow={calculatedPercent}
           aria-valuemin="0"
           aria-valuemax="100"
-          aria-label={label || 'Progress'}
+          aria-label={effectiveAriaLabel}
         />
       </div>
     </div>
