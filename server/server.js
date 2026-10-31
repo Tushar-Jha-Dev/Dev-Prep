@@ -9,8 +9,30 @@ const path = require('path');
 // Load environment variables from server/.env regardless of working directory
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+// Validate production environment configuration before starting
+const isProduction = process.env.NODE_ENV === 'production';
+const jwtSecret = process.env.JWT_SECRET;
+
+if (isProduction) {
+  if (!jwtSecret || jwtSecret.length < 32 || jwtSecret.toLowerCase().includes('change') || jwtSecret.toLowerCase().includes('placeholder')) {
+    throw new Error(
+      '[Startup Error] In production, JWT_SECRET must be configured with a cryptographically strong string of at least 32 characters.'
+    );
+  }
+
+  const driver = (process.env.STORAGE_DRIVER || '').trim().toLowerCase();
+  if (driver === 'postgres' || (!driver && !process.env.DATABASE_URL)) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error(
+        '[Startup Error] In production, DATABASE_URL must be configured for PostgreSQL persistent storage.'
+      );
+    }
+  }
+}
+
 const express = require('express');
 const cors = require('cors');
+const { getStorage } = require('./storage');
 
 // Import modular routes
 const healthRoutes = require('./routes/healthRoutes');
@@ -30,8 +52,27 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// Trust reverse proxy (Vercel / AWS / load balancers)
+app.set('trust proxy', 1);
+
+// CORS Policy: permissive for same-origin requests through the frontend rewrite,
+// and allowed development hosts in local testing
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. serverless rewrites, curl, mobile apps)
+      if (!origin) return callback(null, true);
+      if (!isProduction) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Blocked by CORS policy'));
+    },
+    credentials: true
+  })
+);
 
 // Route-specific 200 KB body limit for avatar uploads (preserves 100 KB global limit)
 app.use('/api/profile/avatar', express.json({ limit: '200kb' }));

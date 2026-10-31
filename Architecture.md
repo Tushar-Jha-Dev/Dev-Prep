@@ -20,18 +20,22 @@
 
 **Tools:** VS Code / Antigravity, Git + GitHub, Postman, npm.
 
-**Storage:** JSON files only. No database.
+**Storage:** Dual storage drivers behind a unified interface (`server/storage/`):
+- `file` driver (default for local development and tests): JSON files in `server/data/`.
+- `postgres` driver (production on Vercel): Cloud PostgreSQL hosted on Neon via `@neondatabase/serverless`.
 
 ## 2. High-Level Flow
 
 ```
-React (Vite, port 5173)
-   |  fetch() over HTTP/JSON
+React (Vite, port 5173 / Vercel Edge CDN)
+   |  fetch() over HTTP/JSON (/api/...)
    v
-Express API (port 5000)
-   |  routes -> controllers -> fileDb utility
+Express API (port 5000 / Vercel Serverless Function)
+   |  routes -> controllers -> storage layer (server/storage/)
    v
-JSON files in server/data/
+[STORAGE DRIVER]
+  ├── 'file': server/utils/fileDb.js -> server/data/*.json
+  └── 'postgres': Neon PostgreSQL (connection pool, transactions, row locks)
 ```
 
 Request lifecycle: React page calls a function in `services/api.js`, which sends an HTTP request to `/api/...`. The Express route passes it to a controller, which validates input, reads/writes the JSON file through the `fileDb` utility, and returns JSON. React updates state and re-renders.
@@ -231,11 +235,44 @@ Topic percentages, solved counts, and weekly chart data are **computed** at requ
 ```
 Stores cropped 256x256 client-sanitized images (15–60 KB). Created on first write; deleting an avatar removes the key.
 
-## 7. JSON Storage Design (`utils/fileDb.js`)
-- Resolve all paths with `path.join(__dirname, '..', 'data', fileName)`; file names are hardcoded constants, never taken from user input.
-- `readJson(file, fallback)`: use `fs/promises.readFile`; if the file is missing, create it with the fallback; if JSON is invalid, log the error and return the fallback (or a clear 500), never crash.
-- `writeJson(file, data)`: serialize writes per file through a simple promise queue to avoid simultaneous write corruption; write to a temp file then rename for atomic saves.
-- IDs generated with `crypto.randomUUID()` (seed data may use readable IDs).
+## 7. Storage Layer Design (`server/storage/`)
+
+DevPrep implements a unified storage abstraction layer (`server/storage/`) supporting two pluggable drivers:
+
+1. **`FileStorageDriver` (`fileDriver.js`)**:
+   - Primary driver for local development and offline test suites.
+   - Wraps `server/utils/fileDb.js` for atomic temp-write-then-rename persistence.
+   - Enforces sequential progress updates and user signup duplicate checks via in-memory mutex promise queues.
+   - Supports optional `dataDir` for isolated test runs.
+
+2. **`PostgresStorageDriver` (`postgresDriver.js`)**:
+   - Production driver for Vercel Serverless deployments, connected to Neon PostgreSQL.
+   - Package: `@neondatabase/serverless` (connection pool with WebSocket/HTTP pooling).
+   - SQL Injection immunity via parameterized queries for all operations.
+   - Concurrency & Atomicity:
+     - Signups: Database unique index `CREATE UNIQUE INDEX idx_users_lower_email ON users (LOWER(email))` prevents race conditions, catching code `23505` to return HTTP 409.
+     - Progress: Row-level lock `SELECT data FROM progress WHERE user_id = $1 FOR UPDATE` inside an explicit `BEGIN ... COMMIT` transaction guarantees parallel updates never overwrite each other.
+     - Attempts: Inserts inside a transaction and trims review snapshots older than the latest 50 attempts using a single atomic SQL statement (`UPDATE mock_attempts SET data = data - 'reviews' ...`).
+     - Solutions: Single-statement upsert `ON CONFLICT (user_id, question_id, language) DO UPDATE`.
+     - Applications: Single-statement upsert `ON CONFLICT (id) DO UPDATE`.
+     - Avatars: Single-statement upsert `ON CONFLICT (user_id) DO UPDATE`.
+
+### Database Schema (8 Tables)
+- `users`: `(id, email, password_hash, role, data, created_at, updated_at)`
+- `questions`: `(id, title, topic, difficulty, data, created_at, updated_at)`
+- `mcq_bank`: `(id, topic, question, data, created_at, updated_at)`
+- `applications`: `(id, user_id, company, role, status, data, created_at, updated_at)` (FK -> users)
+- `solutions`: `(id, user_id, question_id, language, data, created_at, updated_at)` (FK -> users)
+- `mock_attempts`: `(id, user_id, topic, date, data, created_at)` (FK -> users)
+- `progress`: `(user_id, data, created_at, updated_at)` (FK -> users)
+- `avatars`: `(user_id, data_url, data, created_at, updated_at)` (FK -> users)
+
+### Driver Selection Logic (`storage/index.js`)
+```javascript
+1. Explicit: process.env.STORAGE_DRIVER ('file' | 'postgres')
+2. Production default: If NODE_ENV === 'production' && process.env.DATABASE_URL -> 'postgres'
+3. Fallback: 'file'
+```
 
 ## 8. Error Handling
 - Controllers use `try/catch` and pass errors to a central `errorHandler` middleware.
@@ -253,5 +290,27 @@ Stores cropped 256x256 client-sanitized images (15–60 KB). Created on first wr
 - **Client:** `AuthContext` (user, login, signup, logout), `ProtectedRoute`, `AdminRoute`; `api.js` attaches the token, and on a 401 response clears auth and redirects to `/login`.
 - **Seed:** `npm run seed` creates the admin and demo users and the demo user's sample data.
 
-## 10. Deployment (optional, last phase)
-Local run is the baseline. If time permits: client on Vercel, server on Render/Railway (note: free hosts may reset local JSON files, so mention this limitation in the report).
+## 10. Deployment (Vercel + Neon Postgres)
+
+DevPrep is configured for full production deployment on **Vercel** with persistent data backed by **Neon PostgreSQL**:
+
+### Deployment Architecture
+- **Frontend (`client/`)**: Deployed as a Vite Single Page Application on Vercel. `client/vercel.json` proxies all `/api/*` calls to the backend API domain, eliminating CORS issues and hardcoded URLs.
+- **Backend API (`server/`)**: Deployed as a Vercel Serverless Function entry point via `server/server.js` and `server/vercel.json`.
+- **Database (Neon PostgreSQL)**: Managed cloud Postgres instance provisioned via Vercel Marketplace.
+
+### Production Environment Variables
+- `NODE_ENV=production`
+- `PORT=5000` (local dev)
+- `JWT_SECRET`: Random string of 32+ characters (server startup rejects short or placeholder secrets in production).
+- `ADMIN_EMAIL`: Production administrator email.
+- `ADMIN_PASSWORD`: Strong production administrator password (seed rejects "Admin@1234" in production).
+- `DATABASE_URL`: Connection string provided by Neon (e.g., `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require`).
+- `CLIENT_URL`: Client URL for CORS whitelist (e.g., `https://devprep.vercel.app`).
+- `ALLOW_DEMO_USER`: Set to `true` if demo user should be seeded in production (defaults to `false`).
+
+### One-Time Production Setup Steps
+1. Deploy Server project to Vercel and attach Neon database (sets `DATABASE_URL`).
+2. Run database seeding: `npm run seed` (creates admin user, 36 DSA problems, 45 MCQs).
+3. (Optional) Run data import from local files: `npm run import-local -- --confirm`.
+4. Deploy Client project to Vercel, updating `client/vercel.json` with the deployed backend domain.

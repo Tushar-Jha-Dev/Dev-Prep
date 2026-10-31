@@ -15,14 +15,23 @@ Read `PRD.md`, `Architecture.md`, `Design.md`, `Phases.md`, and `Memory.md` befo
 
 ## 2. Tech Boundaries
 
-**Use only:** React + Vite (JavaScript), React Router, plain CSS with CSS variables, Recharts, Lucide React, native fetch, Node.js, Express, cors, bcryptjs, jsonwebtoken, dotenv, nodemon, `fs/promises`, `path`, `crypto`.
+**Use only:** React + Vite (JavaScript), React Router, plain CSS with CSS variables, Recharts, Lucide React, native fetch, Node.js, Express, cors, bcryptjs, jsonwebtoken, dotenv, nodemon, `fs/promises`, `path`, `crypto`, and `@neondatabase/serverless` (Postgres storage driver).
 
 **Do NOT use or add:**
-- Any database or ORM (MongoDB, Mongoose, MySQL, PostgreSQL, SQLite, Prisma, Firebase, Supabase, etc.)
+- Any other database driver or ORM (MongoDB, Mongoose, MySQL, SQLite, Prisma, Sequelize, Firebase, Supabase, etc.)
 - TypeScript, Next.js, Redux, axios, Tailwind, or UI kits (MUI, Bootstrap, Chakra, shadcn) unless the student approves
 - Passport, express-session, OAuth/social login, or third-party auth services (Firebase Auth, Auth0, Clerk). Auth must be done exactly as described in `Architecture.md` section 9
 - Code-execution features on the server (compilers, server-side sandbox APIs, backend code evaluation runners). Note: A client-side JavaScript test runner inside an isolated Web Worker (Phase 10B) is approved under the Safety Rules below.
 - Any new package not listed above without asking first and explaining why
+
+### Approved Override: PostgreSQL Storage Driver for Vercel Deployment
+- **Scope Change Approved:** To enable production deployment on Vercel with persistent data, DevPrep supports two interchangeable storage drivers behind a unified storage interface (`server/storage/`):
+  1. `file` driver (default): Local JSON file persistence via `server/utils/fileDb.js` for local development and offline testing.
+  2. `postgres` driver: Cloud PostgreSQL persistence via Neon on Vercel Serverless.
+- **Approved Package:** Exactly ONE Postgres client package (`@neondatabase/serverless`). No ORMs.
+- **Driver Selection:** Controlled by `STORAGE_DRIVER` env var (or auto-selected in production when `DATABASE_URL` is set). Local dev without `DATABASE_URL` remains 100% functional with local JSON files.
+- **Serverless Parallel Safety:** Per-record rows, parameterized SQL queries, explicit transactions, row-level locks (`SELECT ... FOR UPDATE`), and single-statement upserts.
+- **API & UI Contract Integrity:** Zero API contract changes; all endpoint routes, JSON request/response formats, and frontend components remain identical.
 
 ### Code Execution Safety Rules (Phase 10B)
 - User code runs ONLY in the browser, inside a Web Worker. Never execute user code on the Express server: no eval, new Function, vm, or child_process anywhere in server/.

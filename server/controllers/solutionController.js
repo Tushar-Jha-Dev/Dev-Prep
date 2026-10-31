@@ -13,7 +13,7 @@
  */
 
 const crypto = require('crypto');
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const { ALLOWED_LANGUAGES, MAX_CODE_LENGTH } = require('../utils/validators');
 
 /**
@@ -23,17 +23,8 @@ const { ALLOWED_LANGUAGES, MAX_CODE_LENGTH } = require('../utils/validators');
 async function getUserSolutions(req, res, next) {
   try {
     const userId = req.user.id;
-    const solutions = await readJson(FILES.SOLUTIONS, []);
-
-    // Filter to authenticated user only, returning summary metadata
-    const userSolutions = solutions
-      .filter((s) => s.userId === userId)
-      .map((s) => ({
-        questionId: s.questionId,
-        language: s.language,
-        updatedAt: s.updatedAt
-      }));
-
+    const storage = getStorage();
+    const userSolutions = await storage.listSolutions(userId);
     res.status(200).json(userSolutions);
   } catch (err) {
     next(err);
@@ -50,22 +41,13 @@ async function getQuestionSolutions(req, res, next) {
     const { questionId } = req.params;
 
     // Verify question exists in question bank
-    const questions = await readJson(FILES.QUESTIONS, []);
-    const questionExists = questions.some((q) => q.id === questionId);
-    if (!questionExists) {
+    const storage = getStorage();
+    const question = await storage.findQuestionById(questionId);
+    if (!question) {
       return res.status(404).json({ error: `Question with ID "${questionId}" not found` });
     }
 
-    const solutions = await readJson(FILES.SOLUTIONS, []);
-    const questionSolutions = solutions
-      .filter((s) => s.userId === userId && s.questionId === questionId)
-      .map((s) => ({
-        id: s.id,
-        language: s.language,
-        code: s.code,
-        updatedAt: s.updatedAt
-      }));
-
+    const questionSolutions = await storage.findSolutionsByQuestion(userId, questionId);
     res.status(200).json(questionSolutions);
   } catch (err) {
     next(err);
@@ -84,9 +66,9 @@ async function saveSolution(req, res, next) {
     const { language, code } = req.body;
 
     // 1. Verify question exists
-    const questions = await readJson(FILES.QUESTIONS, []);
-    const questionExists = questions.some((q) => q.id === questionId);
-    if (!questionExists) {
+    const storage = getStorage();
+    const question = await storage.findQuestionById(questionId);
+    if (!question) {
       return res.status(404).json({ error: `Question with ID "${questionId}" not found` });
     }
 
@@ -108,33 +90,7 @@ async function saveSolution(req, res, next) {
       });
     }
 
-    const solutions = await readJson(FILES.SOLUTIONS, []);
-    const existingIndex = solutions.findIndex(
-      (s) => s.userId === userId && s.questionId === questionId && s.language === language
-    );
-
-    const now = new Date().toISOString();
-    let savedRecord;
-
-    if (existingIndex >= 0) {
-      // Update existing record
-      solutions[existingIndex].code = code;
-      solutions[existingIndex].updatedAt = now;
-      savedRecord = solutions[existingIndex];
-    } else {
-      // Create new record
-      savedRecord = {
-        id: crypto.randomUUID(),
-        userId,
-        questionId,
-        language,
-        code,
-        updatedAt: now
-      };
-      solutions.push(savedRecord);
-    }
-
-    await writeJson(FILES.SOLUTIONS, solutions);
+    const savedRecord = await storage.saveSolution(userId, questionId, { language, code });
 
     res.status(200).json({
       id: savedRecord.id,
@@ -164,18 +120,8 @@ async function deleteSolution(req, res, next) {
       });
     }
 
-    const solutions = await readJson(FILES.SOLUTIONS, []);
-    const filteredSolutions = solutions.filter((s) => {
-      if (s.userId !== userId || s.questionId !== questionId) {
-        return true;
-      }
-      if (language && s.language !== language) {
-        return true;
-      }
-      return false; // Remove matching record
-    });
-
-    await writeJson(FILES.SOLUTIONS, filteredSolutions);
+    const storage = getStorage();
+    await storage.deleteSolution(userId, questionId, language);
 
     res.status(200).json({
       message: language

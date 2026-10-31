@@ -14,7 +14,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const { isValidEmail, isValidPassword, validateRequiredFields } = require('../utils/validators');
 
 /**
@@ -59,9 +59,9 @@ async function signup(req, res, next) {
       });
     }
 
-    // 4. Check for duplicate email in users.json
-    const users = await readJson(FILES.USERS, []);
-    const existingUser = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    // 4. Check for duplicate email
+    const storage = getStorage();
+    const existingUser = await storage.findUserByEmail(normalizedEmail);
     if (existingUser) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -79,34 +79,20 @@ async function signup(req, res, next) {
       createdAt: new Date().toISOString()
     };
 
-    // 7. Save to users.json
-    users.push(newUser);
-    await writeJson(FILES.USERS, users);
-
-    // 8. Provision empty user state in progress.json
-    const progressMap = await readJson(FILES.PROGRESS, {});
-    progressMap[newUser.id] = {
-      solvedQuestionIds: [],
-      streak: { current: 0, lastActiveDate: null },
-      activity: [
-        {
-          type: 'account_created',
-          text: 'Account created',
-          date: new Date().toISOString()
-        }
-      ],
-      profile: {
-        skills: [],
-        goals: [],
-        theme: 'light'
+    // 7. Save to storage (creates user and provisions initial progress atomically)
+    try {
+      await storage.createUser(newUser);
+    } catch (createErr) {
+      if (createErr.status === 409 || createErr.code === '23505') {
+        return res.status(409).json({ error: 'Email already registered' });
       }
-    };
-    await writeJson(FILES.PROGRESS, progressMap);
+      throw createErr;
+    }
 
-    // 9. Generate JWT token
+    // 8. Generate JWT token
     const token = generateToken(newUser);
 
-    // 10. Return sanitized response (never return passwordHash)
+    // 9. Return sanitized response (never return passwordHash)
     res.status(201).json({
       token,
       user: {
@@ -136,8 +122,8 @@ async function login(req, res, next) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const users = await readJson(FILES.USERS, []);
-    const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    const storage = getStorage();
+    const user = await storage.findUserByEmail(normalizedEmail);
 
     // Use identical error message for missing user or bad password to prevent enumeration
     if (!user) {
@@ -173,8 +159,8 @@ async function login(req, res, next) {
  */
 async function getMe(req, res, next) {
   try {
-    const users = await readJson(FILES.USERS, []);
-    const user = users.find((u) => u.id === req.user.id);
+    const storage = getStorage();
+    const user = await storage.findUserById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

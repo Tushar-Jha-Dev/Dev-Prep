@@ -13,7 +13,7 @@
  * - Decoded binary payload capped at 100 KB.
  */
 
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const { validateAvatarPayload } = require('../utils/validators');
 
 /**
@@ -23,11 +23,11 @@ const { validateAvatarPayload } = require('../utils/validators');
 async function getAvatar(req, res, next) {
   try {
     const userId = req.user.id;
-    const avatars = await readJson(FILES.AVATARS, {});
-    const userAvatar = avatars[userId];
+    const storage = getStorage();
+    const dataUrl = await storage.getAvatar(userId);
 
     res.status(200).json({
-      avatar: userAvatar ? userAvatar.dataUrl : null
+      avatar: dataUrl
     });
   } catch (err) {
     next(err);
@@ -36,7 +36,7 @@ async function getAvatar(req, res, next) {
 
 /**
  * PUT /api/profile/avatar
- * Validates base64 data URL and saves to avatars.json
+ * Validates base64 data URL and saves to avatars storage
  */
 async function updateAvatar(req, res, next) {
   try {
@@ -48,13 +48,8 @@ async function updateAvatar(req, res, next) {
       return res.status(400).json({ error: validationError });
     }
 
-    const avatars = await readJson(FILES.AVATARS, {});
-    avatars[userId] = {
-      dataUrl: image,
-      updatedAt: new Date().toISOString()
-    };
-
-    await writeJson(FILES.AVATARS, avatars);
+    const storage = getStorage();
+    await storage.setAvatar(userId, image);
 
     res.status(200).json({
       message: 'Profile photo updated successfully',
@@ -67,17 +62,13 @@ async function updateAvatar(req, res, next) {
 
 /**
  * DELETE /api/profile/avatar
- * Removes avatar entry from avatars.json
+ * Removes avatar entry from storage
  */
 async function deleteAvatar(req, res, next) {
   try {
     const userId = req.user.id;
-    const avatars = await readJson(FILES.AVATARS, {});
-
-    if (avatars[userId]) {
-      delete avatars[userId];
-      await writeJson(FILES.AVATARS, avatars);
-    }
+    const storage = getStorage();
+    await storage.deleteAvatar(userId);
 
     res.status(200).json({
       message: 'Profile photo removed successfully',

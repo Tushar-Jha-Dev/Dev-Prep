@@ -9,7 +9,7 @@
  *    activity without relying on client-supplied timestamps.
  */
 
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const { validateEnum, ALLOWED_PROGRESS_ACTIONS, ALLOWED_TOPICS } = require('../utils/validators');
 
 /**
@@ -41,8 +41,8 @@ function createDefaultProgress() {
 async function getProgress(req, res, next) {
   try {
     const userId = req.user.id;
-    const progressMap = await readJson(FILES.PROGRESS, {});
-    const userProgress = progressMap[userId] || createDefaultProgress();
+    const storage = getStorage();
+    const userProgress = await storage.getProgress(userId);
 
     // Ensure profile has safe baseline structure
     userProgress.profile = {
@@ -58,9 +58,9 @@ async function getProgress(req, res, next) {
     };
 
     // Read other collections to compute live aggregations
-    const questions = await readJson(FILES.QUESTIONS, []);
-    const mockAttempts = await readJson(FILES.MOCK_ATTEMPTS, []);
-    const applications = await readJson(FILES.APPLICATIONS, []);
+    const questions = await storage.listQuestions();
+    const mockAttempts = await storage.listAttempts(userId);
+    const applications = await storage.listApplications(userId);
 
     // 1. Topic Progress Calculation (All 9 topics)
     // Filter solved IDs against active questions so deleted questions are strictly ignored
@@ -166,8 +166,7 @@ async function updateProgress(req, res, next) {
       return res.status(400).json({ error: actionError });
     }
 
-    const progressMap = await readJson(FILES.PROGRESS, {});
-    const userProgress = progressMap[userId] || createDefaultProgress();
+    const storage = getStorage();
 
     if (action === 'markSolved') {
       if (!questionId) {
@@ -175,70 +174,94 @@ async function updateProgress(req, res, next) {
       }
 
       // Verify question exists in question bank
-      const questions = await readJson(FILES.QUESTIONS, []);
-      const question = questions.find((q) => q.id === questionId);
+      const question = await storage.findQuestionById(questionId);
       if (!question) {
         return res.status(404).json({ error: `Question with ID "${questionId}" does not exist` });
       }
 
-      // Add to solvedQuestionIds if not already present
-      if (!userProgress.solvedQuestionIds.includes(questionId)) {
-        userProgress.solvedQuestionIds.push(questionId);
+      const updatedProgress = await storage.atomicUpdateProgress(userId, async (userProgress) => {
+        if (!userProgress.streak) {
+          userProgress.streak = { current: 0, lastActiveDate: null };
+        }
+        if (!Array.isArray(userProgress.activity)) {
+          userProgress.activity = [];
+        }
+        if (!Array.isArray(userProgress.solvedQuestionIds)) {
+          userProgress.solvedQuestionIds = [];
+        }
 
-        // Update stored streak
-        const today = new Date().toISOString().split('T')[0];
-        const lastDate = userProgress.streak.lastActiveDate;
+        // Add to solvedQuestionIds if not already present
+        if (!userProgress.solvedQuestionIds.includes(questionId)) {
+          userProgress.solvedQuestionIds.push(questionId);
 
-        if (lastDate === today) {
-          // Already solved a problem today: streak stays current
-        } else if (lastDate) {
-          const lastTime = new Date(lastDate).getTime();
-          const currentTime = new Date(today).getTime();
-          const diffDays = Math.round((currentTime - lastTime) / (1000 * 60 * 60 * 24));
+          // Update stored streak
+          const today = new Date().toISOString().split('T')[0];
+          const lastDate = userProgress.streak.lastActiveDate;
 
-          if (diffDays === 1) {
-            // Consecutive day: increment streak
-            userProgress.streak.current = (userProgress.streak.current || 0) + 1;
+          if (lastDate === today) {
+            // Already solved a problem today: streak stays current
+          } else if (lastDate) {
+            const lastTime = new Date(lastDate).getTime();
+            const currentTime = new Date(today).getTime();
+            const diffDays = Math.round((currentTime - lastTime) / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+              // Consecutive day: increment streak
+              userProgress.streak.current = (userProgress.streak.current || 0) + 1;
+            } else {
+              // Broken streak: reset to 1
+              userProgress.streak.current = 1;
+            }
+            userProgress.streak.lastActiveDate = today;
           } else {
-            // Broken streak: reset to 1
+            // First problem ever solved
             userProgress.streak.current = 1;
+            userProgress.streak.lastActiveDate = today;
           }
-          userProgress.streak.lastActiveDate = today;
-        } else {
-          // First problem ever solved
-          userProgress.streak.current = 1;
-          userProgress.streak.lastActiveDate = today;
+
+          // Add activity entry
+          userProgress.activity.unshift({
+            type: 'solved',
+            text: `Solved ${question.title}`,
+            date: new Date().toISOString()
+          });
+
+          // Limit activity feed to latest 50 entries
+          if (userProgress.activity.length > 50) {
+            userProgress.activity = userProgress.activity.slice(0, 50);
+          }
         }
 
-        // Add activity entry
-        userProgress.activity.unshift({
-          type: 'solved',
-          text: `Solved ${question.title}`,
-          date: new Date().toISOString()
-        });
+        return userProgress;
+      });
 
-        // Limit activity feed to latest 50 entries
-        if (userProgress.activity.length > 50) {
-          userProgress.activity = userProgress.activity.slice(0, 50);
-        }
-      }
+      return res.status(200).json(updatedProgress);
     } else if (action === 'unmarkSolved') {
       if (!questionId) {
         return res.status(400).json({ error: 'Field "questionId" is required for unmarkSolved' });
       }
 
-      userProgress.solvedQuestionIds = userProgress.solvedQuestionIds.filter((id) => id !== questionId);
+      const question = await storage.findQuestionById(questionId);
 
-      // Remove activity entry for this question if present
-      const questions = await readJson(FILES.QUESTIONS, []);
-      const question = questions.find((q) => q.id === questionId);
-      if (question && Array.isArray(userProgress.activity)) {
-        const targetText = `Solved ${question.title}`;
-        const actIndex = userProgress.activity.findIndex((act) => act.text === targetText);
-        if (actIndex !== -1) {
-          userProgress.activity.splice(actIndex, 1);
+      const updatedProgress = await storage.atomicUpdateProgress(userId, async (userProgress) => {
+        if (!Array.isArray(userProgress.solvedQuestionIds)) {
+          userProgress.solvedQuestionIds = [];
         }
-      }
+        userProgress.solvedQuestionIds = userProgress.solvedQuestionIds.filter((id) => id !== questionId);
+
+        // Remove activity entry for this question if present
+        if (question && Array.isArray(userProgress.activity)) {
+          const targetText = `Solved ${question.title}`;
+          const actIndex = userProgress.activity.findIndex((act) => act.text === targetText);
+          if (actIndex !== -1) {
+            userProgress.activity.splice(actIndex, 1);
+          }
+        }
+
+        return userProgress;
+      });
+
+      return res.status(200).json(updatedProgress);
     } else if (action === 'updateProfile') {
       const {
         skills,
@@ -251,11 +274,8 @@ async function updateProgress(req, res, next) {
         weeklyGoal
       } = req.body;
 
-      if (!userProgress.profile) {
-        userProgress.profile = {};
-      }
-
       // 1. Validate & sanitize skills (array of strings, max 30 skills, max 30 chars each)
+      let cleanedSkills = undefined;
       if (skills !== undefined) {
         if (!Array.isArray(skills)) {
           return res.status(400).json({ error: 'Skills must be an array of strings' });
@@ -263,7 +283,7 @@ async function updateProgress(req, res, next) {
         if (skills.length > 30) {
           return res.status(400).json({ error: 'Cannot exceed maximum of 30 skills' });
         }
-        const cleanedSkills = [];
+        cleanedSkills = [];
         for (const s of skills) {
           if (typeof s !== 'string' || !s.trim()) {
             return res.status(400).json({ error: 'Each skill must be a non-empty string' });
@@ -276,10 +296,10 @@ async function updateProgress(req, res, next) {
             cleanedSkills.push(val);
           }
         }
-        userProgress.profile.skills = cleanedSkills;
       }
 
-      // 2. Validate & sanitize goals (array of strings, max 15 goals, max 100 chars each)
+      // 2. Validate & sanitize goals (array of strings, max 15 goals, max 150 chars each)
+      let cleanedGoals = undefined;
       if (goals !== undefined) {
         if (!Array.isArray(goals)) {
           return res.status(400).json({ error: 'Goals must be an array of strings' });
@@ -287,7 +307,7 @@ async function updateProgress(req, res, next) {
         if (goals.length > 15) {
           return res.status(400).json({ error: 'Cannot exceed maximum of 15 goals' });
         }
-        const cleanedGoals = [];
+        cleanedGoals = [];
         for (const g of goals) {
           if (typeof g !== 'string' || !g.trim()) {
             return res.status(400).json({ error: 'Each goal must be a non-empty string' });
@@ -300,7 +320,6 @@ async function updateProgress(req, res, next) {
             cleanedGoals.push(val);
           }
         }
-        userProgress.profile.goals = cleanedGoals;
       }
 
       // 3. Validate theme
@@ -308,7 +327,6 @@ async function updateProgress(req, res, next) {
         if (theme !== 'light' && theme !== 'dark') {
           return res.status(400).json({ error: 'Theme must be either "light" or "dark"' });
         }
-        userProgress.profile.theme = theme;
       }
 
       // 4. Academic & career fields (optional strings, max 100 chars)
@@ -316,14 +334,12 @@ async function updateProgress(req, res, next) {
         if (typeof college !== 'string' || college.length > 100) {
           return res.status(400).json({ error: 'College must be a string up to 100 characters' });
         }
-        userProgress.profile.college = college.trim();
       }
 
       if (branch !== undefined) {
         if (typeof branch !== 'string' || branch.length > 100) {
           return res.status(400).json({ error: 'Branch must be a string up to 100 characters' });
         }
-        userProgress.profile.branch = branch.trim();
       }
 
       if (graduationYear !== undefined) {
@@ -331,30 +347,40 @@ async function updateProgress(req, res, next) {
         if (gradStr && (!/^\d{4}$/.test(gradStr) || Number(gradStr) < 2020 || Number(gradStr) > 2035)) {
           return res.status(400).json({ error: 'Graduation year must be a valid 4-digit year between 2020 and 2035' });
         }
-        userProgress.profile.graduationYear = gradStr;
       }
 
       if (targetRole !== undefined) {
         if (typeof targetRole !== 'string' || targetRole.length > 100) {
           return res.status(400).json({ error: 'Target role must be a string up to 100 characters' });
         }
-        userProgress.profile.targetRole = targetRole.trim();
       }
 
+      let numGoal = undefined;
       if (weeklyGoal !== undefined) {
-        const numGoal = Number(weeklyGoal);
+        numGoal = Number(weeklyGoal);
         if (!Number.isInteger(numGoal) || numGoal < 1 || numGoal > 50) {
           return res.status(400).json({ error: 'Weekly goal must be an integer between 1 and 50 problems' });
         }
-        userProgress.profile.weeklyGoal = numGoal;
       }
+
+      const updatedProgress = await storage.atomicUpdateProgress(userId, async (userProgress) => {
+        if (!userProgress.profile) {
+          userProgress.profile = {};
+        }
+        if (cleanedSkills !== undefined) userProgress.profile.skills = cleanedSkills;
+        if (cleanedGoals !== undefined) userProgress.profile.goals = cleanedGoals;
+        if (theme !== undefined) userProgress.profile.theme = theme;
+        if (college !== undefined) userProgress.profile.college = college.trim();
+        if (branch !== undefined) userProgress.profile.branch = branch.trim();
+        if (graduationYear !== undefined) userProgress.profile.graduationYear = String(graduationYear).trim();
+        if (targetRole !== undefined) userProgress.profile.targetRole = targetRole.trim();
+        if (numGoal !== undefined) userProgress.profile.weeklyGoal = numGoal;
+
+        return userProgress;
+      });
+
+      return res.status(200).json(updatedProgress);
     }
-
-    // Persist changes to progress.json
-    progressMap[userId] = userProgress;
-    await writeJson(FILES.PROGRESS, progressMap);
-
-    res.status(200).json(userProgress);
   } catch (err) {
     next(err);
   }
