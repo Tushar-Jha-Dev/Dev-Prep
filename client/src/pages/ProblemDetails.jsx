@@ -94,6 +94,49 @@ export default function ProblemDetails() {
   const [savingSolution, setSavingSolution] = useState(false);
   const [solutionMessage, setSolutionMessage] = useState(null);
   const [solutionError, setSolutionError] = useState(null);
+  const [autoSaveError, setAutoSaveError] = useState(null);
+
+  // Save queue & concurrency management
+  const isSavingRef = useRef(false);
+  const nextSaveRef = useRef(null);
+  const savedSolutionsRef = useRef(savedSolutions);
+  const draftsRef = useRef(drafts);
+  const lastConfirmedSavedCodeRef = useRef({});
+
+  useEffect(() => {
+    savedSolutionsRef.current = savedSolutions;
+  }, [savedSolutions]);
+
+  useEffect(() => {
+    draftsRef.current = drafts;
+  }, [drafts]);
+
+  // Warn before leaving page if there are unsaved changes
+  const hasAnyUnsavedChanges = LANGUAGES.some((lang) => {
+    const code = drafts[lang] || '';
+    const saved = savedSolutions[lang];
+    if (saved) {
+      return code !== saved.code;
+    }
+    if (code === '') return false;
+    if (lang === 'JavaScript' && question?.starterCode && code === question.starterCode) {
+      return false;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (!hasAnyUnsavedChanges) return;
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasAnyUnsavedChanges]);
+
 
   // Editor DOM References & Cursor Tracking
   const textareaRef = useRef(null);
@@ -128,6 +171,7 @@ export default function ProblemDetails() {
         'C++': ''
       };
 
+      const confirmedMap = {};
       (solutionsData || []).forEach((item) => {
         solMap[item.language] = {
           id: item.id,
@@ -135,7 +179,9 @@ export default function ProblemDetails() {
           updatedAt: item.updatedAt
         };
         initialDrafts[item.language] = item.code;
+        confirmedMap[item.language] = item.code;
       });
+      lastConfirmedSavedCodeRef.current = confirmedMap;
 
       // Phase 10B: If no saved JavaScript code exists and question has starterCode, prefill draft
       if (!initialDrafts.JavaScript && questionData.starterCode) {
@@ -211,40 +257,112 @@ export default function ProblemDetails() {
     setTimeout(updateCursorPosition, 0);
   };
 
-  // Save current language solution
-  const handleSaveSolution = async () => {
-    const currentCode = drafts[selectedLanguage] || '';
-    if (currentCode.length > MAX_CODE_CHARS) {
-      setSolutionError(`Code exceeds the maximum limit of ${MAX_CODE_CHARS} characters.`);
+  // Check if auto-save should be skipped
+  const shouldSkipAutoSave = (code, lang) => {
+    const saved = savedSolutionsRef.current[lang] || savedSolutions[lang];
+    const lastSavedCode = saved ? saved.code : (lastConfirmedSavedCodeRef.current[lang] ?? null);
+
+    // Skip if code equals what was last saved
+    if (lastSavedCode !== null && code === lastSavedCode) {
+      return true;
+    }
+
+    // Skip if no saved solution yet and code is empty or unchanged starter code
+    if (!saved && lastSavedCode === null) {
+      if (code === '') return true;
+      const starter = (lang === 'JavaScript' && question?.starterCode) ? question.starterCode : '';
+      if (starter && code === starter) return true;
+    }
+
+    return false;
+  };
+
+  // Core save executor with serialization queue (prevent overlapping requests, latest code wins)
+  const performSave = async (lang, codeToSave, { isAutoSave = false } = {}) => {
+    if (isSavingRef.current) {
+      nextSaveRef.current = { lang, code: codeToSave, isAutoSave };
       return;
     }
 
+    isSavingRef.current = true;
     setSavingSolution(true);
-    setSolutionError(null);
-    setSolutionMessage(null);
+    if (!isAutoSave) {
+      setSolutionError(null);
+      setSolutionMessage(null);
+    }
+    setAutoSaveError(null);
+
+    let targetLang = lang;
+    let targetCode = codeToSave;
+    let targetIsAutoSave = isAutoSave;
 
     try {
-      const saved = await api.saveSolution(id, {
-        language: selectedLanguage,
-        code: currentCode
-      });
-
-      setSavedSolutions((prev) => ({
-        ...prev,
-        [selectedLanguage]: {
-          id: saved.id,
-          code: saved.code,
-          updatedAt: saved.updatedAt
+      while (targetLang && targetCode !== undefined) {
+        if (targetCode.length > MAX_CODE_CHARS) {
+          const limitMsg = `Code exceeds the maximum limit of ${MAX_CODE_CHARS.toLocaleString()} characters.`;
+          if (targetIsAutoSave) {
+            setAutoSaveError(`Tests ran, but your code could not be saved: ${limitMsg}`);
+          } else {
+            setSolutionError(limitMsg);
+          }
+          break;
         }
-      }));
 
-      setSolutionMessage(`Saved successfully at ${new Date(saved.updatedAt).toLocaleTimeString()}`);
-      setTimeout(() => setSolutionMessage(null), 4000);
-    } catch (err) {
-      setSolutionError(err.message || 'Failed to save solution');
+        try {
+          const saved = await api.saveSolution(id, {
+            language: targetLang,
+            code: targetCode
+          });
+
+          lastConfirmedSavedCodeRef.current[targetLang] = saved.code;
+
+          setSavedSolutions((prev) => ({
+            ...prev,
+            [targetLang]: {
+              id: saved.id,
+              code: saved.code,
+              updatedAt: saved.updatedAt
+            }
+          }));
+
+          if (!targetIsAutoSave) {
+            setSolutionMessage(`Saved successfully at ${new Date(saved.updatedAt).toLocaleTimeString()}`);
+            setTimeout(() => setSolutionMessage(null), 4000);
+          }
+        } catch (err) {
+          const reason = err.message || 'Failed to save solution';
+          if (targetIsAutoSave) {
+            setAutoSaveError(`Tests ran, but your code could not be saved: ${reason}`);
+          } else {
+            setSolutionError(reason);
+          }
+        }
+
+        // Handle any newer save request queued while the request was in-flight
+        if (nextSaveRef.current) {
+          const next = nextSaveRef.current;
+          nextSaveRef.current = null;
+          const lastSaved = lastConfirmedSavedCodeRef.current[next.lang];
+          if (next.code !== lastSaved) {
+            targetLang = next.lang;
+            targetCode = next.code;
+            targetIsAutoSave = next.isAutoSave;
+            continue;
+          }
+        }
+
+        break;
+      }
     } finally {
+      isSavingRef.current = false;
       setSavingSolution(false);
     }
+  };
+
+  // Save current language solution
+  const handleSaveSolution = async () => {
+    const currentCode = drafts[selectedLanguage] || '';
+    await performSave(selectedLanguage, currentCode, { isAutoSave: false });
   };
 
   // Reset to starter code template (JavaScript only)
@@ -276,6 +394,7 @@ export default function ProblemDetails() {
             delete copy[selectedLanguage];
             return copy;
           });
+          delete lastConfirmedSavedCodeRef.current[selectedLanguage];
         } catch (err) {
           alert(`Failed to delete saved solution: ${err.message}`);
           return;
@@ -296,13 +415,20 @@ export default function ProblemDetails() {
     if (!question || !Array.isArray(question.testCases) || question.testCases.length === 0) return;
     if (runningTests) return;
 
+    const codeToTest = drafts.JavaScript || '';
+
+    // Auto-save user code concurrently if changes exist; do not await before running tests
+    if (!shouldSkipAutoSave(codeToTest, 'JavaScript')) {
+      performSave('JavaScript', codeToTest, { isAutoSave: true }).catch(() => {});
+    }
+
     setRunningTests(true);
     setTestReport(null);
     setActiveTestTab('cases');
 
     try {
       const report = await runTestsAsync({
-        userCode: drafts.JavaScript || '',
+        userCode: codeToTest,
         functionName: question.functionName,
         testCases: question.testCases,
         compareMode: question.compare || 'exact'
@@ -363,6 +489,7 @@ export default function ProblemDetails() {
   const hasUnsavedChanges = currentCode !== (currentSaved?.code || '');
   const hasTestCases = Array.isArray(question.testCases) && question.testCases.length > 0;
   const isJavaScript = selectedLanguage === 'JavaScript';
+
 
   const lineCount = Math.max(1, currentCode.split('\n').length);
   const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
@@ -507,7 +634,11 @@ export default function ProblemDetails() {
             <select
               id="solution-language"
               value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
+              onChange={(e) => {
+                setSelectedLanguage(e.target.value);
+                if (solutionError) setSolutionError(null);
+                if (autoSaveError) setAutoSaveError(null);
+              }}
               className="form-select editor-language-select"
             >
               {LANGUAGES.map((lang) => (
@@ -554,6 +685,7 @@ export default function ProblemDetails() {
               const val = e.target.value;
               setDrafts((prev) => ({ ...prev, [selectedLanguage]: val }));
               if (solutionError) setSolutionError(null);
+              if (autoSaveError) setAutoSaveError(null);
               updateCursorPosition();
             }}
             onKeyDown={handleEditorKeyDownEvent}
@@ -577,7 +709,7 @@ export default function ProblemDetails() {
         {/* Keyboard Shortcuts Hint Bar */}
         <div className="editor-shortcuts-hint">
           <span><kbd>{isMac ? '⌘' : 'Ctrl'}+Enter</kbd> Run Tests</span>
-          <span><kbd>{isMac ? '⌘' : 'Ctrl'}+S</kbd> Save Note</span>
+          <span><kbd>{isMac ? '⌘' : 'Ctrl'}+S</kbd> Save</span>
           <span><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> Indent</span>
           <span><kbd>Esc</kbd> Exit Editor</span>
         </div>
@@ -585,7 +717,12 @@ export default function ProblemDetails() {
         {/* Editor Footer: Metadata, Status & Actions */}
         <div className="editor-footer">
           <div className="editor-status-info">
-            {hasUnsavedChanges ? (
+            {savingSolution ? (
+              <span className="saved-time-label">
+                <Loader2 size={13} className="spin-icon" />
+                <span>Saving...</span>
+              </span>
+            ) : hasUnsavedChanges ? (
               <span className="unsaved-badge">
                 <span className="unsaved-dot">•</span> Unsaved changes
               </span>
@@ -597,6 +734,14 @@ export default function ProblemDetails() {
             ) : (
               <span className="empty-draft-label">No code saved for {selectedLanguage} yet</span>
             )}
+
+            {autoSaveError && (
+              <span className="editor-autosave-error" role="status">
+                <AlertCircle size={14} />
+                <span>{autoSaveError}</span>
+              </span>
+            )}
+
             <span className="editor-cursor-pos">
               Ln {cursorPos.line}, Col {cursorPos.col}
             </span>
@@ -642,7 +787,7 @@ export default function ProblemDetails() {
               className="btn btn-secondary btn-sm editor-save-btn"
             >
               <Save size={14} />
-              <span>{savingSolution ? 'Saving...' : 'Save Note'}</span>
+              <span>{savingSolution ? 'Saving...' : 'Save'}</span>
             </button>
 
             {/* Phase 10B: Run Tests Button */}

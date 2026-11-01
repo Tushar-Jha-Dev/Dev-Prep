@@ -2165,6 +2165,13 @@ html:not([data-theme="dark"]) .logo-tile {
   color: var(--text-muted);
 }
 
+.editor-autosave-error {
+  color: var(--danger);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .empty-draft-label {
   color: var(--text-muted);
   font-style: italic;
