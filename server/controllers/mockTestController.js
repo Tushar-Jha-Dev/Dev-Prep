@@ -13,7 +13,7 @@
  *    `req.user.id` so students can track their historical test performance.
  */
 
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const { ALLOWED_TOPICS } = require('../utils/validators');
 
 /**
@@ -36,13 +36,8 @@ async function getMockTest(req, res, next) {
   try {
     const { topic, count } = req.query;
 
-    let pool = await readJson(FILES.MCQ_BANK, []);
-
-    // Filter by topic if specified and not 'All'
-    if (topic && topic !== 'All' && topic.trim() !== '') {
-      const topicLower = topic.trim().toLowerCase();
-      pool = pool.filter((q) => q.topic && q.topic.toLowerCase() === topicLower);
-    }
+    const storage = getStorage();
+    const pool = await storage.listMcqs({ topic });
 
     if (pool.length === 0) {
       return res.status(404).json({ error: `No mock test questions available for topic "${topic}"` });
@@ -87,7 +82,8 @@ async function submitMockTest(req, res, next) {
       return res.status(400).json({ error: 'Field "answers" must be an array of question selections' });
     }
 
-    const questionBank = await readJson(FILES.MCQ_BANK, []);
+    const storage = getStorage();
+    const questionBank = await storage.listMcqs();
 
     let score = 0;
     const reviews = [];
@@ -136,19 +132,7 @@ async function submitMockTest(req, res, next) {
       reviews // Immutable historical snapshot preserved at submit time
     };
 
-    const allAttempts = await readJson(FILES.MOCK_ATTEMPTS, []);
-    allAttempts.push(attempt);
-
-    // Snapshot retention policy: keep full question reviews for user's latest 50 attempts
-    const userAttempts = allAttempts.filter((a) => a.userId === userId);
-    userAttempts.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-    if (userAttempts.length > 50) {
-      for (let i = 50; i < userAttempts.length; i++) {
-        delete userAttempts[i].reviews;
-      }
-    }
-
-    await writeJson(FILES.MOCK_ATTEMPTS, allAttempts);
+    await storage.createAttempt(attempt);
 
     res.status(200).json({
       attempt,
@@ -169,46 +153,13 @@ async function submitMockTest(req, res, next) {
 async function getUserAttempts(req, res, next) {
   try {
     const userId = req.user.id;
-    const allAttempts = await readJson(FILES.MOCK_ATTEMPTS, []);
+    const storage = getStorage();
+    const result = await storage.listAttempts(userId, {
+      page: req.query.page,
+      limit: req.query.limit
+    });
 
-    // Filter attempts strictly by userId and sort newest first
-    const userAttempts = allAttempts.filter((att) => att.userId === userId);
-    userAttempts.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-    function toSummary(att) {
-      return {
-        id: att.id,
-        topic: att.topic || 'Mixed',
-        score: att.score,
-        total: att.total,
-        accuracy: att.accuracy,
-        date: att.date,
-        timeTaken: att.timeTaken || 0,
-        topicBreakdown: att.topicBreakdown || null,
-        hasSnapshot: Array.isArray(att.reviews) && att.reviews.length > 0
-      };
-    }
-
-    // If page or limit query param is provided, return paginated object
-    if (req.query.page !== undefined || req.query.limit !== undefined) {
-      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-      const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 10));
-      const total = userAttempts.length;
-      const totalPages = Math.ceil(total / limit) || 1;
-      const startIndex = (page - 1) * limit;
-      const paginated = userAttempts.slice(startIndex, startIndex + limit);
-
-      return res.status(200).json({
-        attempts: paginated.map(toSummary),
-        total,
-        page,
-        totalPages,
-        limit
-      });
-    }
-
-    // Default: return summary array directly for backward compatibility
-    res.status(200).json(userAttempts.map(toSummary));
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }
@@ -224,8 +175,8 @@ async function getAttemptById(req, res, next) {
     const userId = req.user.id;
     const { id } = req.params;
 
-    const allAttempts = await readJson(FILES.MOCK_ATTEMPTS, []);
-    const attempt = allAttempts.find((att) => att.id === id);
+    const storage = getStorage();
+    const attempt = await storage.findAttemptById(userId, id);
 
     if (!attempt || attempt.userId !== userId) {
       return res.status(404).json({ error: 'Assessment report not found' });
@@ -260,22 +211,9 @@ async function getAttemptById(req, res, next) {
  */
 async function getTopicCounts(req, res, next) {
   try {
-    const bank = await readJson(FILES.MCQ_BANK, []);
-
-    const counts = {};
-    for (const t of ALLOWED_TOPICS) {
-      counts[t] = 0;
-    }
-    for (const q of bank) {
-      if (counts[q.topic] !== undefined) {
-        counts[q.topic]++;
-      }
-    }
-
-    res.status(200).json({
-      counts,
-      total: bank.length
-    });
+    const storage = getStorage();
+    const result = await storage.getMcqTopicCounts();
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }

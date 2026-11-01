@@ -18,11 +18,12 @@ Developed as a college project for **B.Tech Computer Science and Engineering (CS
 5. [Prerequisites & Setup](#prerequisites--setup)
 6. [Seeding & Demo Accounts](#seeding--demo-accounts)
 7. [Running the Application](#running-the-application)
-8. [Automated Verification Test Suites](#automated-verification-test-suites)
-9. [REST API Specification](#rest-api-specification)
-10. [Design System & Accessibility](#design-system--accessibility)
-11. [Security & Sandbox Architecture](#security--sandbox-architecture)
-12. [Academic Integrity & Project Scope](#academic-integrity--project-scope)
+8. [Deploying on Vercel](#deploying-on-vercel)
+9. [Automated Verification Test Suites](#automated-verification-test-suites)
+10. [REST API Specification](#rest-api-specification)
+11. [Design System & Accessibility](#design-system--accessibility)
+12. [Security & Sandbox Architecture](#security--sandbox-architecture)
+13. [Academic Integrity & Project Scope](#academic-integrity--project-scope)
 
 ---
 
@@ -147,7 +148,7 @@ Developed as a college project for **B.Tech Computer Science and Engineering (CS
 | **Web Server** | Express.js | REST routing, middleware orchestration, and error handling |
 | **Security & Hashing**| `bcryptjs` (10 rounds) | Cryptographic password hashing protecting student accounts |
 | **Session Tokens** | `jsonwebtoken` (JWT) | Stateless 7-day authentication tokens |
-| **Persistence Engine**| Plain JSON + `fs/promises` | Custom atomic write-queue database engine |
+| **Persistence Engine**| Plain JSON (`fileDb.js`) / Neon PostgreSQL (`@neondatabase/serverless`) | Dual storage drivers behind a unified interface (`server/storage/`) |
 | **Browser Sandbox** | HTML5 Web Workers | Isolated client-side JavaScript execution environment |
 
 ---
@@ -359,6 +360,58 @@ Open your web browser and navigate to **`http://localhost:5173`**.
 
 ---
 
+## Deploying on Vercel
+
+DevPrep is configured for production deployment on **Vercel** with persistent data backed by **Neon PostgreSQL** (provisioned via Vercel Marketplace).
+
+### Dual Driver Persistence Model
+- **Local Development:** When no `DATABASE_URL` is set, DevPrep defaults to the `file` driver (`server/data/*.json`). Zero configuration or database setup is required to run locally.
+- **Production on Vercel:** In production with `DATABASE_URL` configured, DevPrep automatically switches to the `postgres` driver (`@neondatabase/serverless`).
+
+### Step 1: Deploy Backend (Express API on Vercel)
+1. In the Vercel Dashboard, create a new project and set the **Root Directory** to `server`.
+2. Attach a Neon Postgres database via **Vercel Marketplace (Integrations > Neon)**. This automatically provisions the database and sets `DATABASE_URL`.
+3. Configure the following environment variables in your Vercel Project Settings:
+   - `NODE_ENV`: `production`
+   - `JWT_SECRET`: A secure random string of at least 32 characters (the server startup checks refuse weak or placeholder secrets).
+   - `ADMIN_EMAIL`: Your production administrator email (e.g., `admin@yourdomain.com`).
+   - `ADMIN_PASSWORD`: A secure production password (must be at least 8 characters; "Admin@1234" is rejected in production).
+   - `CLIENT_URL`: The URL of your deployed frontend (e.g., `https://devprep.vercel.app`).
+   - `ALLOW_DEMO_USER`: `false` (set to `true` only if you want the demo student account seeded in production).
+4. Click **Deploy**. Note the assigned deployment URL (e.g., `https://devprep-api.vercel.app`).
+
+### Step 2: One-Time Database Seeding
+Initialize the production database with 36 curated DSA problems, 45 MCQ questions, and the administrator account:
+```bash
+cd server
+DATABASE_URL="your-neon-connection-string" NODE_ENV=production ADMIN_PASSWORD="your-strong-password" npm run seed
+```
+*The seed script is fully idempotent: if records already exist, it skips them without overwriting.*
+
+### Step 3: (Optional) Import Existing Local Data
+To migrate existing local mock attempts, applications, solutions, and avatars from `server/data/*.json` into PostgreSQL:
+```bash
+cd server
+DATABASE_URL="your-neon-connection-string" npm run import-local -- --confirm
+```
+*The importer requires `--confirm`, preserves password hashes intact, and outputs only clean count summaries.*
+
+### Step 4: Deploy Frontend (React + Vite Client on Vercel)
+1. Open [`client/vercel.json`](client/vercel.json) and replace `REPLACE_WITH_API_DOMAIN` with your backend domain:
+   ```json
+   {
+     "rewrites": [
+       { "source": "/api/:path*", "destination": "https://devprep-api.vercel.app/api/:path*" },
+       { "source": "/(.*)", "destination": "/index.html" }
+     ]
+   }
+   ```
+2. In the Vercel Dashboard, create a new project and set the **Root Directory** to `client`.
+3. Framework Preset: **Vite**. Build Command: `npm run build`. Output Directory: `dist`.
+4. Click **Deploy**. All `/api/*` traffic is seamlessly proxied to the serverless backend.
+
+---
+
 ## Automated Verification Test Suites
 
 DevPrep features 12 standalone automated verification test suites written in plain Node.js (requiring zero external testing frameworks) that rigorously test all backend operations, concurrency locks, data privacy, and editor behaviors.
@@ -369,7 +422,10 @@ From the `server/` directory, run any test suite:
 # 1. Test JSON File Storage Engine (Concurrency, Queues & Recovery)
 npm run test:db
 
-# 2. Test User Authentication, Password Hashing & RBAC
+# 2. Test Storage Interface Contract & Concurrency (File & Postgres Drivers)
+npm run test:contract
+
+# 3. Test User Authentication, Password Hashing & RBAC
 npm run test:auth
 
 # 3. Test Question Repository, Dynamic Filters & Solve Status

@@ -23,7 +23,7 @@
  */
 
 const crypto = require('crypto');
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const { ALLOWED_TOPICS } = require('../utils/validators');
 
 /**
@@ -102,21 +102,8 @@ function validateMcqPayload(body) {
  */
 async function listMcqs(req, res, next) {
   try {
-    const { topic, search } = req.query;
-    let mcqs = await readJson(FILES.MCQ_BANK, []);
-
-    // Filter by topic if specified
-    if (topic && topic !== 'All' && topic.trim() !== '') {
-      const topicLower = topic.trim().toLowerCase();
-      mcqs = mcqs.filter((m) => m.topic && m.topic.toLowerCase() === topicLower);
-    }
-
-    // Filter by search query on question text
-    if (search && search.trim() !== '') {
-      const searchLower = search.trim().toLowerCase();
-      mcqs = mcqs.filter((m) => m.question && m.question.toLowerCase().includes(searchLower));
-    }
-
+    const storage = getStorage();
+    const mcqs = await storage.listMcqs(req.query);
     res.status(200).json(mcqs);
   } catch (err) {
     next(err);
@@ -130,9 +117,9 @@ async function listMcqs(req, res, next) {
 async function getMcqById(req, res, next) {
   try {
     const { id } = req.params;
-    const mcqs = await readJson(FILES.MCQ_BANK, []);
+    const storage = getStorage();
+    const mcq = await storage.findMcqById(id);
 
-    const mcq = mcqs.find((m) => m.id === id);
     if (!mcq) {
       return res.status(404).json({ error: `MCQ with ID "${id}" not found` });
     }
@@ -160,7 +147,8 @@ async function createMcq(req, res, next) {
     const cleanOptions = options.map((o) => o.trim());
     const cleanExplanation = explanation ? explanation.trim() : '';
 
-    const mcqs = await readJson(FILES.MCQ_BANK, []);
+    const storage = getStorage();
+    const mcqs = await storage.listMcqs({ topic: cleanTopic });
 
     // Check for duplicate question text within the same topic
     const duplicate = mcqs.find(
@@ -183,8 +171,7 @@ async function createMcq(req, res, next) {
       explanation: cleanExplanation
     };
 
-    mcqs.push(newMcq);
-    await writeJson(FILES.MCQ_BANK, mcqs);
+    await storage.createMcq(newMcq);
 
     res.status(201).json(newMcq);
   } catch (err) {
@@ -210,14 +197,14 @@ async function updateMcq(req, res, next) {
     const cleanOptions = options.map((o) => o.trim());
     const cleanExplanation = explanation ? explanation.trim() : '';
 
-    const mcqs = await readJson(FILES.MCQ_BANK, []);
-
-    const existingIndex = mcqs.findIndex((m) => m.id === id);
-    if (existingIndex === -1) {
+    const storage = getStorage();
+    const existing = await storage.findMcqById(id);
+    if (!existing) {
       return res.status(404).json({ error: `MCQ with ID "${id}" not found` });
     }
 
-    // Check duplicate question text on other records
+    // Check duplicate question text on other records under this topic
+    const mcqs = await storage.listMcqs({ topic: cleanTopic });
     const duplicate = mcqs.find(
       (m) =>
         m.id !== id &&
@@ -239,8 +226,7 @@ async function updateMcq(req, res, next) {
       explanation: cleanExplanation
     };
 
-    mcqs[existingIndex] = updatedMcq;
-    await writeJson(FILES.MCQ_BANK, mcqs);
+    await storage.updateMcq(id, updatedMcq);
 
     res.status(200).json(updatedMcq);
   } catch (err) {
@@ -255,15 +241,12 @@ async function updateMcq(req, res, next) {
 async function deleteMcq(req, res, next) {
   try {
     const { id } = req.params;
-    const mcqs = await readJson(FILES.MCQ_BANK, []);
+    const storage = getStorage();
+    const deleted = await storage.deleteMcq(id);
 
-    const existingIndex = mcqs.findIndex((m) => m.id === id);
-    if (existingIndex === -1) {
+    if (!deleted) {
       return res.status(404).json({ error: `MCQ with ID "${id}" not found` });
     }
-
-    const [deleted] = mcqs.splice(existingIndex, 1);
-    await writeJson(FILES.MCQ_BANK, mcqs);
 
     res.status(200).json({
       message: `MCQ "${deleted.id}" successfully deleted`,

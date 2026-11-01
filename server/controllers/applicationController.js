@@ -10,7 +10,7 @@
  * 4. Atomic File Persistence: Uses `readJson` and `writeJson` from `fileDb.js` for safe concurrency.
  */
 
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const {
   ALLOWED_APPLICATION_STATUSES,
   validateRequiredFields,
@@ -24,36 +24,8 @@ const {
 async function getApplications(req, res, next) {
   try {
     const userId = req.user.id;
-    const { status, search } = req.query;
-
-    const allApplications = await readJson(FILES.APPLICATIONS, []);
-
-    // 1. Scope strictly to the logged-in user
-    let userApplications = allApplications.filter((app) => app.userId === userId);
-
-    // 2. Filter by Status if provided
-    if (status && status.trim() !== '') {
-      const statusLower = status.trim().toLowerCase();
-      userApplications = userApplications.filter(
-        (app) => app.status && app.status.toLowerCase() === statusLower
-      );
-    }
-
-    // 3. Filter by Search Query (company, role, location, notes)
-    if (search && search.trim() !== '') {
-      const query = search.trim().toLowerCase();
-      userApplications = userApplications.filter(
-        (app) =>
-          (app.company && app.company.toLowerCase().includes(query)) ||
-          (app.role && app.role.toLowerCase().includes(query)) ||
-          (app.location && app.location.toLowerCase().includes(query)) ||
-          (app.notes && app.notes.toLowerCase().includes(query))
-      );
-    }
-
-    // Sort by appliedDate descending (newest first)
-    userApplications.sort((a, b) => new Date(b.appliedDate || 0) - new Date(a.appliedDate || 0));
-
+    const storage = getStorage();
+    const userApplications = await storage.listApplications(userId, req.query);
     res.status(200).json(userApplications);
   } catch (err) {
     next(err);
@@ -95,9 +67,8 @@ async function createApplication(req, res, next) {
       notes: typeof notes === 'string' ? notes.trim() : ''
     };
 
-    const allApplications = await readJson(FILES.APPLICATIONS, []);
-    allApplications.push(newApplication);
-    await writeJson(FILES.APPLICATIONS, allApplications);
+    const storage = getStorage();
+    await storage.createApplication(newApplication);
 
     res.status(201).json(newApplication);
   } catch (err) {
@@ -115,10 +86,10 @@ async function updateApplication(req, res, next) {
     const { id } = req.params;
     const { company, role, location, appliedDate, status, notes } = req.body;
 
-    const allApplications = await readJson(FILES.APPLICATIONS, []);
-    const index = allApplications.findIndex((app) => app.id === id && app.userId === userId);
+    const storage = getStorage();
+    const current = await storage.findApplicationById(userId, id);
 
-    if (index === -1) {
+    if (!current) {
       return res.status(404).json({ error: `Application with ID "${id}" not found` });
     }
 
@@ -142,7 +113,6 @@ async function updateApplication(req, res, next) {
       return res.status(400).json({ error: 'Applied date cannot be empty' });
     }
 
-    const current = allApplications[index];
     const updatedApplication = {
       ...current,
       id, // Preserve ID
@@ -155,8 +125,7 @@ async function updateApplication(req, res, next) {
       notes: notes !== undefined ? notes.trim() : current.notes
     };
 
-    allApplications[index] = updatedApplication;
-    await writeJson(FILES.APPLICATIONS, allApplications);
+    await storage.updateApplication(userId, id, updatedApplication);
 
     res.status(200).json(updatedApplication);
   } catch (err) {
@@ -173,15 +142,12 @@ async function deleteApplication(req, res, next) {
     const userId = req.user.id;
     const { id } = req.params;
 
-    const allApplications = await readJson(FILES.APPLICATIONS, []);
-    const index = allApplications.findIndex((app) => app.id === id && app.userId === userId);
+    const storage = getStorage();
+    const deleted = await storage.deleteApplication(userId, id);
 
-    if (index === -1) {
+    if (!deleted) {
       return res.status(404).json({ error: `Application with ID "${id}" not found` });
     }
-
-    allApplications.splice(index, 1);
-    await writeJson(FILES.APPLICATIONS, allApplications);
 
     res.status(200).json({
       message: 'Application deleted successfully',

@@ -7,6 +7,8 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "seed": "node scripts/seed.js",
+    "import-local": "node scripts/import-local.js",
+    "test:contract": "node scripts/test-storage-contract.js",
     "test:db": "node scripts/test-fileDb.js",
     "test:auth": "node scripts/test-auth.js",
     "test:phase5": "node scripts/test-phase5.js",
@@ -39,6 +41,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

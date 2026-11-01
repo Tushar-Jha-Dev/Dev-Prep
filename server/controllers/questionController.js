@@ -8,7 +8,7 @@
  * 3. RESTful Resource Identifiers: Individual questions are resolved by their unique ID (`GET /:id`).
  */
 
-const { readJson, writeJson, FILES } = require('../utils/fileDb');
+const { getStorage } = require('../storage');
 const {
   ALLOWED_TOPICS,
   ALLOWED_DIFFICULTIES,
@@ -23,30 +23,8 @@ const {
  */
 async function getQuestions(req, res, next) {
   try {
-    const { topic, difficulty, search } = req.query;
-    let questions = await readJson(FILES.QUESTIONS, []);
-
-    // Filter by Topic (e.g. Arrays, Strings)
-    if (topic && topic.trim() !== '') {
-      const topicLower = topic.trim().toLowerCase();
-      questions = questions.filter((q) => q.topic.toLowerCase() === topicLower);
-    }
-
-    // Filter by Difficulty (Easy, Medium, Hard)
-    if (difficulty && difficulty.trim() !== '') {
-      const diffLower = difficulty.trim().toLowerCase();
-      questions = questions.filter((q) => q.difficulty.toLowerCase() === diffLower);
-    }
-
-    // Filter by Search Text (matches title or description)
-    if (search && search.trim() !== '') {
-      const searchLower = search.trim().toLowerCase();
-      questions = questions.filter((q) =>
-        q.title.toLowerCase().includes(searchLower) ||
-        (q.description && q.description.toLowerCase().includes(searchLower))
-      );
-    }
-
+    const storage = getStorage();
+    const questions = await storage.listQuestions(req.query);
     res.status(200).json(questions);
   } catch (err) {
     next(err);
@@ -60,8 +38,8 @@ async function getQuestions(req, res, next) {
 async function getQuestionById(req, res, next) {
   try {
     const { id } = req.params;
-    const questions = await readJson(FILES.QUESTIONS, []);
-    const question = questions.find((q) => q.id === id);
+    const storage = getStorage();
+    const question = await storage.findQuestionById(id);
 
     if (!question) {
       return res.status(404).json({ error: `Question with ID "${id}" not found` });
@@ -114,7 +92,6 @@ async function createQuestion(req, res, next) {
       : [];
 
     // 4. Generate unique ID
-    const questions = await readJson(FILES.QUESTIONS, []);
     const topicSlug = topic.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4);
     const id = `q-${topicSlug}-${Date.now().toString(36)}`;
 
@@ -142,8 +119,8 @@ async function createQuestion(req, res, next) {
       newQuestion.testCases = req.body.testCases;
     }
 
-    questions.push(newQuestion);
-    await writeJson(FILES.QUESTIONS, questions);
+    const storage = getStorage();
+    await storage.createQuestion(newQuestion);
 
     res.status(201).json(newQuestion);
   } catch (err) {
@@ -160,10 +137,10 @@ async function updateQuestion(req, res, next) {
     const { id } = req.params;
     const { title, topic, difficulty, description, examples, constraints, solutionApproach } = req.body;
 
-    const questions = await readJson(FILES.QUESTIONS, []);
-    const index = questions.findIndex((q) => q.id === id);
+    const storage = getStorage();
+    const current = await storage.findQuestionById(id);
 
-    if (index === -1) {
+    if (!current) {
       return res.status(404).json({ error: `Question with ID "${id}" not found` });
     }
 
@@ -195,8 +172,6 @@ async function updateQuestion(req, res, next) {
     if (testRunnerError) {
       return res.status(400).json({ error: testRunnerError });
     }
-
-    const current = questions[index];
 
     const formattedExamples = Array.isArray(examples)
       ? examples.filter((ex) => ex && (ex.input || ex.output))
@@ -238,8 +213,7 @@ async function updateQuestion(req, res, next) {
       delete updatedQuestion.testCases;
     }
 
-    questions[index] = updatedQuestion;
-    await writeJson(FILES.QUESTIONS, questions);
+    await storage.updateQuestion(id, updatedQuestion);
 
     res.status(200).json(updatedQuestion);
   } catch (err) {
@@ -254,22 +228,11 @@ async function updateQuestion(req, res, next) {
 async function deleteQuestion(req, res, next) {
   try {
     const { id } = req.params;
-    const questions = await readJson(FILES.QUESTIONS, []);
-    const index = questions.findIndex((q) => q.id === id);
+    const storage = getStorage();
+    const deleted = await storage.deleteQuestion(id);
 
-    if (index === -1) {
+    if (!deleted) {
       return res.status(404).json({ error: `Question with ID "${id}" not found` });
-    }
-
-    // Remove the question
-    questions.splice(index, 1);
-    await writeJson(FILES.QUESTIONS, questions);
-
-    // Also remove any solutions saved for this question
-    const solutions = await readJson(FILES.SOLUTIONS, []);
-    const filteredSolutions = solutions.filter((s) => s.questionId !== id);
-    if (filteredSolutions.length !== solutions.length) {
-      await writeJson(FILES.SOLUTIONS, filteredSolutions);
     }
 
     res.status(200).json({
