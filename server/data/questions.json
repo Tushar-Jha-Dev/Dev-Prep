@@ -583,7 +583,240 @@
       "1 <= strs.length <= 10^4",
       "0 <= strs[i].length <= 100"
     ],
-    "solutionApproach": "Use a hash map where the key is the sorted string (or a character count tuple) and the value is a list of matching words. Time complexity: O(n * k log k) where k is the max string length."
+    "solutionApproach": "Use a hash map where the key is the sorted string (or a character count tuple) and the value is a list of matching words. Time complexity: O(n * k log k) where k is the max string length.",
+    "functionName": "groupAnagrams",
+    "starterCode": "/**\n * @param {string[]} strs\n * @return {string[][]}\n */\nfunction groupAnagrams(strs) {\n  // Write your code here\n}",
+    "compare": "exact",
+    "testCases": [
+      {
+        "args": [
+          [
+            "eat",
+            "tea",
+            "tan",
+            "ate",
+            "nat",
+            "bat"
+          ]
+        ],
+        "expected": [
+          [
+            "eat",
+            "tea",
+            "ate"
+          ],
+          [
+            "tan",
+            "nat"
+          ],
+          [
+            "bat"
+          ]
+        ],
+        "hidden": false
+      },
+      {
+        "args": [
+          [
+            ""
+          ]
+        ],
+        "expected": [
+          [
+            ""
+          ]
+        ],
+        "hidden": false
+      },
+      {
+        "args": [
+          [
+            "a"
+          ]
+        ],
+        "expected": [
+          [
+            "a"
+          ]
+        ],
+        "hidden": false
+      },
+      {
+        "args": [
+          [
+            "abc",
+            "bca",
+            "cab",
+            "xyz",
+            "zyx",
+            "yxz"
+          ]
+        ],
+        "expected": [
+          [
+            "abc",
+            "bca",
+            "cab"
+          ],
+          [
+            "xyz",
+            "zyx",
+            "yxz"
+          ]
+        ],
+        "hidden": false
+      },
+      {
+        "args": [
+          [
+            "ab",
+            "ba",
+            "abc",
+            "cba",
+            "bac",
+            "acb",
+            "a"
+          ]
+        ],
+        "expected": [
+          [
+            "ab",
+            "ba"
+          ],
+          [
+            "abc",
+            "cba",
+            "bac",
+            "acb"
+          ],
+          [
+            "a"
+          ]
+        ],
+        "hidden": false
+      },
+      {
+        "args": [
+          [
+            "abc",
+            "def",
+            "ghi"
+          ]
+        ],
+        "expected": [
+          [
+            "abc"
+          ],
+          [
+            "def"
+          ],
+          [
+            "ghi"
+          ]
+        ],
+        "hidden": true
+      },
+      {
+        "args": [
+          [
+            "aab",
+            "aba",
+            "baa",
+            "abb",
+            "bab",
+            "bba"
+          ]
+        ],
+        "expected": [
+          [
+            "aab",
+            "aba",
+            "baa"
+          ],
+          [
+            "abb",
+            "bab",
+            "bba"
+          ]
+        ],
+        "hidden": true
+      },
+      {
+        "args": [
+          [
+            "",
+            "",
+            "a",
+            "a",
+            "b"
+          ]
+        ],
+        "expected": [
+          [
+            "",
+            ""
+          ],
+          [
+            "a",
+            "a"
+          ],
+          [
+            "b"
+          ]
+        ],
+        "hidden": true
+      },
+      {
+        "args": [
+          [
+            "listen",
+            "silent",
+            "enlist",
+            "google",
+            "gogole",
+            "inlets"
+          ]
+        ],
+        "expected": [
+          [
+            "listen",
+            "silent",
+            "enlist",
+            "inlets"
+          ],
+          [
+            "google",
+            "gogole"
+          ]
+        ],
+        "hidden": true
+      },
+      {
+        "args": [
+          [
+            "aaaaaaaa",
+            "aaaaaaaa",
+            "bbbbbbbb",
+            "bbbbbbbb",
+            "abababab"
+          ]
+        ],
+        "expected": [
+          [
+            "aaaaaaaa",
+            "aaaaaaaa"
+          ],
+          [
+            "bbbbbbbb",
+            "bbbbbbbb"
+          ],
+          [
+            "abababab"
+          ]
+        ],
+        "hidden": true
+      }
+    ]
   },
   {
     "id": "q-ll-1",
